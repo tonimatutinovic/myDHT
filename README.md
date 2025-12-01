@@ -21,11 +21,11 @@ This is the initial version of the library, and the project will be expanded and
 
 ```
 MyDHT/
-├── src/
-│ ├── myDHTlib.h
-│ └── myDHTlib.cpp
 ├── examples/
-│ └── BasicRead/BasicRead.ino
+│  └── BasicRead/BasicRead.ino
+├── src/
+│  ├── myDHTlib.h
+│  └── myDHTlib.cpp
 └── README.md
 ```
 
