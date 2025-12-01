@@ -1,6 +1,9 @@
 #include <myDHTlib.h>
 
+// Pin where the sensor is connected
 const int DHT_PIN = 2;
+
+// Initialize sensor
 
 // For DHT11
 MyDHT dht(DHT_PIN, DHT11);
@@ -10,16 +13,20 @@ MyDHT dht(DHT_PIN, DHT11);
 
 void setup()
 {
+  // Start serial communication
   Serial.begin(115200);
+  // Initialize DHT sensor (sets pin mode)
   dht.begin();
-
+  // Wait for sensor to stabilize
   delay(2000);
 }
 
 void loop()
 {
+  // Read data from sensor with retry mechanism
   DHTError err = dht.read();
 
+  // Check result and print
   if (err == DHT_OK)
   {
     Serial.print("Temperature: ");
@@ -30,23 +37,25 @@ void loop()
   }
   else if (err == DHT_NO_RESPONSE)
   {
-    Serial.println("Sensor not responding!");
+    Serial.println("Error: Sensor not responding!");
   }
   else if (err == DHT_ACK_TIMEOUT)
   {
-    Serial.println("ACK timeout!");
+    Serial.println("Error: ACK timeout!");
   }
   else if (err == DHT_CHECKSUM_FAIL)
   {
-    Serial.println("Checksum error!");
+    Serial.println("Error: Checksum mismatch!");
   }
   else if (err == DHT_BIT_TIMEOUT)
   {
-    Serial.println("Bit read timeout!");
+    Serial.println("Error: Bit read timeout!");
   }
   else
   {
-    Serial.println("Unknown error!")
+    Serial.println("Error: Unknown!");
   }
+
+  // Wait 2 seconds before next read
   delay(2000);
 }
