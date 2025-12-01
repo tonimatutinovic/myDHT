@@ -1,9 +1,10 @@
 #include "myDHTlib.h"
 
-MyDHT::MyDHT(uint8_t pin, DHTType type)
+MyDHT::MyDHT(uint8_t pin, DHTType type, uint8_t retries)
 {
     _pin = pin;
     _type = type;
+    _retries = retries;
 }
 
 void MyDHT::begin()
@@ -11,7 +12,7 @@ void MyDHT::begin()
     pinMode(_pin, INPUT_PULLUP);
 }
 
-DHTError MyDHT::read()
+DHTError MyDHT::readOnce()
 {
     // Start signal
     pinMode(_pin, OUTPUT);
@@ -73,7 +74,22 @@ DHTError MyDHT::read()
         return DHT_CHECKSUM_FAIL;
     }
 
-    return true;
+    return DHT_OK;
+}
+
+DHTError MyDHT::read()
+{
+    DHTError err;
+
+    for (uint8_t attempt = 0; attempt < _retries; attempt++)
+    {
+        err = readOnce();
+        if (err == DHT_OK)
+            return DHT_OK;
+        delay(50);
+    }
+
+    return err;
 }
 
 float MyDHT::getHumidity()

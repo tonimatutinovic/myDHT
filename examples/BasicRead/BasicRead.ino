@@ -44,5 +44,9 @@ void loop()
   {
     Serial.println("Bit read timeout!");
   }
+  else
+  {
+    Serial.println("Unknown error!")
+  }
   delay(2000);
 }

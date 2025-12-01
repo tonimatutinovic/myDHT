@@ -21,17 +21,19 @@ enum DHTError
 class MyDHT
 {
 public:
-    MyDHT(uint8_t pin, DHTType type);
+    MyDHT(uint8_t pin, DHTType type, uint8_t retries = 3);
     void begin();
     float getTemperature();
     float getHumidity();
-    bool read();
+    DHTError read();
 
 private:
     uint8_t _pin;
     DHTType _type;
+    uint8_t _retries;
     int readOneBit();
     uint8_t readByte();
+    DHTError readOnce();
     uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;
 };
 
