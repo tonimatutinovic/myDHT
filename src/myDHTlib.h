@@ -3,10 +3,15 @@
 
 #include <Arduino.h>
 
+enum DHTType{
+    DHT11,
+    DHT22
+};
+
 class MyDHT
 {
 public:
-    MyDHT(uint8_t pin);
+    MyDHT(uint8_t pin, DHTType type);
     void begin();
     float getTemperature();
     float getHumidity();
@@ -14,6 +19,7 @@ public:
 
 private:
     uint8_t _pin;
+    DHTType _type;
     int readOneBit();
     uint8_t readByte();
     uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;

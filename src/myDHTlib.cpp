@@ -1,8 +1,9 @@
 #include "myDHTlib.h"
 
-MyDHT::MyDHT(uint8_t pin)
+MyDHT::MyDHT(uint8_t pin, DHTType type)
 {
     _pin = pin;
+    _type = type;
 }
 
 void MyDHT::begin()
@@ -71,12 +72,35 @@ bool MyDHT::read()
 
 float MyDHT::getHumidity()
 {
-    return _byte1 + _byte2 / 10.0;
+    if (_type == DHT11)
+    {
+        return _byte1 + _byte2 / 10.0;
+    }
+    else
+    {
+        uint16_t raw = (_byte1 << 8) | _byte2;
+        return raw * 0.1;
+    }
 }
 
 float MyDHT::getTemperature()
 {
-    return _byte3 + _byte4 / 10.0;
+    if (_type == DHT11)
+    {
+        return _byte3 + _byte4 / 10.0;
+    }
+    else
+    {
+        uint16_t raw = ((_byte3 & 0x7F) << 8) | _byte4;
+        float temp = raw * 0.1;
+
+        if (_byte3 & 0x80)
+        {
+            temp = -temp;
+        }
+
+        return temp;
+    }
 }
 
 int MyDHT::readOneBit()
