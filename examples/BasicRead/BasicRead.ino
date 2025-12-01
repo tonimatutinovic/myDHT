@@ -18,7 +18,9 @@ void setup()
 
 void loop()
 {
-  if (dht.read())
+  DHTError err = dht.read();
+
+  if (err == DHT_OK)
   {
     Serial.print("Temperature: ");
     Serial.println(dht.getTemperature());
@@ -26,9 +28,21 @@ void loop()
     Serial.println(dht.getHumidity());
     Serial.println("----------------");
   }
-  else
+  else if (err == DHT_NO_RESPONSE)
   {
-    Serial.println("Failed to read from sensor!");
+    Serial.println("Sensor not responding!");
+  }
+  else if (err == DHT_ACK_TIMEOUT)
+  {
+    Serial.println("ACK timeout!");
+  }
+  else if (err == DHT_CHECKSUM_FAIL)
+  {
+    Serial.println("Checksum error!");
+  }
+  else if (err == DHT_BIT_TIMEOUT)
+  {
+    Serial.println("Bit read timeout!");
   }
   delay(2000);
 }

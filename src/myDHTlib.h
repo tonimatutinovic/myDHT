@@ -3,9 +3,19 @@
 
 #include <Arduino.h>
 
-enum DHTType{
+enum DHTType
+{
     DHT11,
     DHT22
+};
+
+enum DHTError
+{
+    DHT_OK = 0,
+    DHT_NO_RESPONSE,
+    DHT_ACK_TIMEOUT,
+    DHT_CHECKSUM_FAIL,
+    DHT_BIT_TIMEOUT
 };
 
 class MyDHT

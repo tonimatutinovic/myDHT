@@ -11,7 +11,7 @@ void MyDHT::begin()
     pinMode(_pin, INPUT_PULLUP);
 }
 
-bool MyDHT::read()
+DHTError MyDHT::read()
 {
     // Start signal
     pinMode(_pin, OUTPUT);
@@ -27,8 +27,7 @@ bool MyDHT::read()
     {
         if (micros() - timer > 1000)
         {
-            Serial.print("Senzor ne reagira!");
-            return false;
+            return DHT_NO_RESPONSE;
         }
     }
 
@@ -37,8 +36,7 @@ bool MyDHT::read()
     {
         if (micros() - timer > 1000)
         {
-            Serial.print("Timeout za ACK!");
-            return false;
+            return DHT_ACK_TIMEOUT;
         }
     }
 
@@ -47,24 +45,32 @@ bool MyDHT::read()
     {
         if (micros() - timer > 1000)
         {
-            Serial.print("Timeout za ACK!");
-            return false;
+            return DHT_ACK_TIMEOUT;
         }
     }
 
     // Čitanje 5 bajtova
     _byte1 = readByte();
+    if (_byte1 == 0xFF)
+        return DHT_BIT_TIMEOUT;
     _byte2 = readByte();
+    if (_byte2 == 0xFF)
+        return DHT_BIT_TIMEOUT;
     _byte3 = readByte();
+    if (_byte3 == 0xFF)
+        return DHT_BIT_TIMEOUT;
     _byte4 = readByte();
+    if (_byte4 == 0xFF)
+        return DHT_BIT_TIMEOUT;
     _byte5 = readByte();
+    if (_byte5 == 0xFF)
+        return DHT_BIT_TIMEOUT;
 
     // Provjera checksum-a
     uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
     if (sum != _byte5)
     {
-        Serial.print("Checksum neodgovara!");
-        return false;
+        return DHT_CHECKSUM_FAIL;
     }
 
     return true;
