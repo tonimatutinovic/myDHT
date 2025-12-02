@@ -1,16 +1,26 @@
+/*
+  MyDHT Library
+  Supports DHT11 and DHT22
+  Provides temperature (C/F/K), humidity, dew point, heat index
+  Author: Your Name
+  Version: 1.0
+*/
+
 #include "myDHTlib.h"
+#include <math.h>
 
 /*
- * Constructor
- * @param pin Arduino pin
- * @param type Sensor type (DHT11 or DHT22)
- * @param retries Number of retry attempts if read fails
- */
+  Constructor
+  @param pin Arduino pin
+  @param type Sensor type (DHT11 or DHT22)
+  @param retries Number of retry attempts if read fails
+*/
 MyDHT::MyDHT(uint8_t pin, DHTType type, uint8_t retries)
 {
     _pin = pin;
     _type = type;
     _retries = retries;
+    _unit = Celsius; // Default temperature unit
 }
 
 // Initialize the sensor (set pin mode)
@@ -20,24 +30,24 @@ void MyDHT::begin()
 }
 
 /*
- * Perform a single read attempt from the sensor
- * @return DHTError code
- */
+  Perform a single read attempt from the sensor
+  @return DHTError code
+*/
 DHTError MyDHT::readOnce()
 {
     // Send start signal
     pinMode(_pin, OUTPUT);
     digitalWrite(_pin, LOW);
-    delay(20); // Pull low for 20ms
+    delay(20); // Pull LOW for 20ms
     digitalWrite(_pin, HIGH);
-    delayMicroseconds(30); // Then pull high for 30µs
+    delayMicroseconds(30); // Then pull HIGH for 30µs
     pinMode(_pin, INPUT_PULLUP);
 
-    // Wait for sensor ACK
+    // Wait for sensor ACK (empirical timeouts)
     unsigned long timer = micros();
     while (digitalRead(_pin) == HIGH)
     {
-        if (micros() - timer > 1000)
+        if (micros() - timer > 1000) // Timeout
         {
             return DHT_NO_RESPONSE;
         }
@@ -89,9 +99,9 @@ DHTError MyDHT::readOnce()
 }
 
 /*
- * Read sensor data with retry mechanism
- * @return DHTError code
- */
+  Read sensor data with retry mechanism
+  @return DHTError code
+*/
 DHTError MyDHT::read()
 {
     DHTError err;
@@ -108,9 +118,9 @@ DHTError MyDHT::read()
 }
 
 /*
- * Get last read humidity
- * @return Relative humidity (%)
- */
+  Get last read humidity
+  @return Relative humidity (%)
+*/
 float MyDHT::getHumidity()
 {
     if (_type == DHT11)
@@ -125,11 +135,12 @@ float MyDHT::getHumidity()
 }
 
 /*
- * Get last read temperature
- * @return Temperature in Celsius
- */
-float MyDHT::getTemperature()
+  Get last read temperature in Celsius
+  @return Temperature in °C
+*/
+float MyDHT::getTemperatureC()
 {
+    _unit = Celsius;
     if (_type == DHT11)
     {
         return _byte3 + _byte4 / 10.0;
@@ -150,9 +161,96 @@ float MyDHT::getTemperature()
 }
 
 /*
- * Read a single bit from the sensor
- * @return 0, 1, or -1 on timeout/error
- */
+  Get last read temperature in Fahrenheit
+  @return Temperature in °F
+*/
+float MyDHT::getTemperatureF()
+{
+    _unit = Fahrenheit;
+    float tempC = getTemperatureC();
+    return tempC * 9.0 / 5.0 + 32;
+}
+
+/*
+  Get last read temperature in Kelvin
+  @return Temperature in K
+*/
+float MyDHT::getTemperatureK()
+{
+    _unit = Kelvin;
+    float tempC = getTemperatureC();
+    return tempC + 273.15;
+}
+
+/*
+  Calculate dew point based on last reading
+  Uses Magnus formula
+  @return Dew point in current temperature unit
+*/
+float MyDHT::getDewPoint()
+{
+    float T = getTemperatureC();
+    float RH = getHumidity();
+    double a = 17.27;
+    double b = 237.7;
+    double alpha = ((a * T) / (b + T)) + log(RH / 100.0);
+    double dewPointC = (b * alpha) / (a - alpha);
+
+    // Convert to selected unit
+    switch (_unit)
+    {
+    case Celsius:
+        return dewPointC;
+    case Fahrenheit:
+        return dewPointC * 9.0 / 5.0 + 32;
+    case Kelvin:
+        return dewPointC + 273.15;
+    }
+}
+
+/*
+  Calculate heat index ("feels like" temperature)
+  Uses Rothfusz regression formula
+  @return Heat Index in current temperature unit
+*/
+float MyDHT::getHeatIndex()
+{
+    float T = (_unit == Fahrenheit) ? getTemperatureF() : getTemperatureC() * 9.0 / 5.0 + 32; // HI formula u F
+    float RH = getHumidity();
+
+    // Simple formula for HI < 80°F
+    float HI = 0.5 * (T + 61.0 + ((T - 68.0) * 1.2) + (RH * 0.094));
+
+    // Apply full Rothfusz regression if HI >= 80°F
+    if (HI >= 80.0)
+    {
+        HI = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH - 0.00683783 * T * T - 0.05481717 * RH * RH + 0.00122874 * T * T * RH + 0.00085282 * T * RH * RH - 0.00000199 * T * T * RH * RH;
+    }
+
+    // Convert to user-selected unit
+    switch (_unit)
+    {
+    case Celsius:
+        return (HI - 32) * 5.0 / 9.0;
+    case Fahrenheit:
+        return HI;
+    case Kelvin:
+        return (HI - 32) * 5.0 / 9.0 + 273.15;
+    }
+}
+
+/*
+ Set number of retry attempts for read()
+*/
+void MyDHT::setRetries(uint8_t retries)
+{
+    _retries = retries;
+}
+
+/*
+  Read a single bit from the sensor
+  @return 0, 1, or -1 on timeout/error
+*/
 int MyDHT::readOneBit()
 {
     unsigned long t = micros();
@@ -188,9 +286,9 @@ int MyDHT::readOneBit()
 }
 
 /*
- * Read a byte (8 bits) from the sensor
- * @return Byte value or 0xFF on error
- */
+  Read a byte (8 bits) from the sensor
+  @return Byte value or 0xFF on error
+*/
 uint8_t MyDHT::readByte()
 {
     uint8_t result = 0;

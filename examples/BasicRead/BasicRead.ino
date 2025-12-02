@@ -3,7 +3,9 @@
 // Pin where the sensor is connected
 const int DHT_PIN = 2;
 
+// ---------------------
 // Initialize sensor
+// ---------------------
 
 // For DHT11
 MyDHT dht(DHT_PIN, DHT11);
@@ -29,10 +31,35 @@ void loop()
   // Check result and print
   if (err == DHT_OK)
   {
+    // Temperature in all units
+    float tempC = dht.getTemperatureC();
+    float tempF = dht.getTemperatureF();
+    float tempK = dht.getTemperatureK();
+
     Serial.print("Temperature: ");
-    Serial.println(dht.getTemperature());
+    Serial.print(tempC);
+    Serial.print(" °C, ");
+    Serial.print(tempF);
+    Serial.print(" °F, ");
+    Serial.print(tempK);
+    Serial.println(" K");
+
+    // Humidity
+    float humidity = dht.getHumidity();
     Serial.print("Humidity: ");
-    Serial.println(dht.getHumidity());
+    Serial.print(humidity);
+    Serial.println(" %");
+
+    // Dew point
+    float dewPoint = dht.getDewPoint();
+    Serial.print("Dew Point: ");
+    Serial.println(dewPoint);
+
+    // Heat Index
+    float hi = dht.getHeatIndex();
+    Serial.print("Heat Index: ");
+    Serial.println(hi);
+
     Serial.println("----------------");
   }
   else if (err == DHT_NO_RESPONSE)
