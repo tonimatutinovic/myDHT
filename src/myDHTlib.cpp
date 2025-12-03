@@ -329,3 +329,20 @@ uint8_t MyDHT::readByte()
 
     return result;
 }
+
+/*
+  Get raw sensor bytes from the last read
+  @return DHTRawData struct containing bytes 1-5 from the sensor
+*/
+DHTRawData MyDHT::getRawData()
+{
+    DHTRawData data;
+
+    data.byte1 = _byte1;
+    data.byte2 = _byte2;
+    data.byte3 = _byte3;
+    data.byte4 = _byte4;
+    data.byte5 = _byte5;
+
+    return data;
+}

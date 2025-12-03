@@ -28,6 +28,16 @@ enum TempUnit
   Kelvin
 };
 
+// DHT raw data
+struct DHTRawData
+{
+  uint8_t byte1;
+  uint8_t byte2;
+  uint8_t byte3;
+  uint8_t byte4;
+  uint8_t byte5;
+};
+
 class MyDHT
 {
 public:
@@ -70,6 +80,9 @@ public:
   // Adjust calibration offset
   void setTemperatureOffset(float offsetC);
   void setHumidityOffset(float offset);
+
+  // Returns raw bytes read from the sensor
+  DHTRawData getRawData();
 
 private:
   uint8_t _pin;                // Pin where sensor is connected
