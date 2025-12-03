@@ -31,11 +31,9 @@ enum TempUnit
 // DHT raw data
 struct DHTRawData
 {
-  uint8_t byte1;
-  uint8_t byte2;
-  uint8_t byte3;
-  uint8_t byte4;
-  uint8_t byte5;
+  uint8_t bytes[5];
+  unsigned long highTimes[40];
+  unsigned long lowTimes[40];
 };
 
 class MyDHT
@@ -81,7 +79,7 @@ public:
   void setTemperatureOffset(float offsetC);
   void setHumidityOffset(float offset);
 
-  // Returns raw bytes read from the sensor
+  // Returns raw data read from the sensor
   DHTRawData getRawData();
 
 private:
@@ -92,12 +90,14 @@ private:
   float _humidityOffset = 0.0; // Humidity offset
 
   // Low-level read functions
-  int readOneBit();    // Reads a single bit from the sensor
-  uint8_t readByte();  // Reads a byte (8 bits) from the sensor
-  DHTError readOnce(); // Performs a single read attempt
+  int readOneBit(int counter);   // Reads a single bit from the sensor
+  uint8_t readByte(int counter); // Reads a byte (8 bits) from the sensor
+  DHTError readOnce();           // Performs a single read attempt
 
   // Last read bytes from the sensor
   uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;
+  unsigned long _highTimes[40];
+  unsigned long _lowTimes[40];
 };
 
 #endif

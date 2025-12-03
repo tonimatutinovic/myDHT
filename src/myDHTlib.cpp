@@ -89,20 +89,26 @@ DHTError MyDHT::readOnce()
         }
     }
 
+    int bitCounter = 0;
+
     // Read 5 bytes
-    _byte1 = readByte();
+    _byte1 = readByte(bitCounter);
     if (_byte1 == 0xFF)
         return DHT_BIT_TIMEOUT;
-    _byte2 = readByte();
+    bitCounter += 8;
+    _byte2 = readByte(bitCounter);
     if (_byte2 == 0xFF)
         return DHT_BIT_TIMEOUT;
-    _byte3 = readByte();
+    bitCounter += 8;
+    _byte3 = readByte(bitCounter);
     if (_byte3 == 0xFF)
         return DHT_BIT_TIMEOUT;
-    _byte4 = readByte();
+    bitCounter += 8;
+    _byte4 = readByte(bitCounter);
     if (_byte4 == 0xFF)
         return DHT_BIT_TIMEOUT;
-    _byte5 = readByte();
+    bitCounter += 8;
+    _byte5 = readByte(bitCounter);
     if (_byte5 == 0xFF)
         return DHT_BIT_TIMEOUT;
 
@@ -274,7 +280,7 @@ void MyDHT::setRetries(uint8_t retries)
   Read a single bit from the sensor
   @return 0, 1, or -1 on timeout/error
 */
-int MyDHT::readOneBit()
+int MyDHT::readOneBit(int counter)
 {
     unsigned long t = micros();
     // Wait for LOW signal
@@ -291,6 +297,8 @@ int MyDHT::readOneBit()
         if (micros() - t > 100) // 100µs timeout
             return -1;
     }
+    unsigned long lowDuration = micros() - t;
+    _lowTimes[counter] = lowDuration;
 
     unsigned long highStart = micros();
     // Start HIGH timer
@@ -301,6 +309,7 @@ int MyDHT::readOneBit()
     }
 
     unsigned long highDuration = micros() - highStart;
+    _highTimes[counter] = highDuration;
     // Determine bit value based on HIGH pulse duration
     if (highDuration > 40)
         return 1;
@@ -312,13 +321,13 @@ int MyDHT::readOneBit()
   Read a byte (8 bits) from the sensor
   @return Byte value or 0xFF on error
 */
-uint8_t MyDHT::readByte()
+uint8_t MyDHT::readByte(int counter)
 {
     uint8_t result = 0;
 
     for (int i = 0; i < 8; i++)
     {
-        int bit = readOneBit();
+        int bit = readOneBit(counter + i);
 
         if (bit < 0)
             return 0xFF;
@@ -332,17 +341,26 @@ uint8_t MyDHT::readByte()
 
 /*
   Get raw sensor bytes from the last read
-  @return DHTRawData struct containing bytes 1-5 from the sensor
+  @return DHTRawData struct containing:
+    - lowTimes[40]  : Duration of LOW pulses in microseconds
+    - highTimes[40] : Duration of HIGH pulses in microseconds
+    - bytes[5]      : Last 5 bytes read from sensor
 */
 DHTRawData MyDHT::getRawData()
 {
     DHTRawData data;
+    // Store last 5 bytes read from sensor
+    data.bytes[0] = _byte1;
+    data.bytes[1] = _byte2;
+    data.bytes[2] = _byte3;
+    data.bytes[3] = _byte4;
+    data.bytes[4] = _byte5;
 
-    data.byte1 = _byte1;
-    data.byte2 = _byte2;
-    data.byte3 = _byte3;
-    data.byte4 = _byte4;
-    data.byte5 = _byte5;
+    for (int i = 0; i < 40; i++)
+    {
+        data.highTimes[i] = _highTimes[i];
+        data.lowTimes[i] = _lowTimes[i];
+    }
 
     return data;
 }

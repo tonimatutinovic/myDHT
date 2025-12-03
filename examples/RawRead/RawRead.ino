@@ -20,20 +20,28 @@ void loop()
 
     if (err == DHT_OK)
     {
-        // Raw sensor bytes
         DHTRawData raw = dht.getRawData();
 
-        Serial.println("Raw sensor bytes:");
-        Serial.print("Byte1: ");
-        Serial.println(raw.byte1);
-        Serial.print("Byte2: ");
-        Serial.println(raw.byte2);
-        Serial.print("Byte3: ");
-        Serial.println(raw.byte3);
-        Serial.print("Byte4: ");
-        Serial.println(raw.byte4);
-        Serial.print("Byte5: ");
-        Serial.println(raw.byte5);
+        Serial.println("Raw bit timings:");
+        for (int i = 0; i < 40; i++)
+        {
+            Serial.print("Bit ");
+            Serial.print(i);
+            Serial.print(": LOW=");
+            Serial.print(raw.lowTimes[i]);
+            Serial.print("us, HIGH=");
+            Serial.print(raw.highTimes[i]);
+            Serial.println("us");
+        }
+
+        Serial.println("Sensor bytes:");
+        for (int i = 0; i < 5; i++)
+        {
+            Serial.print("Byte ");
+            Serial.print(i);
+            Serial.print(": 0x");
+            Serial.println(raw.bytes[i], HEX);
+        }
 
         Serial.println("----------------");
     }
@@ -43,5 +51,5 @@ void loop()
         Serial.println(err);
     }
 
-    delay(2000);
+    delay(5000);
 }
