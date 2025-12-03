@@ -20,13 +20,31 @@ MyDHT::MyDHT(uint8_t pin, DHTType type, uint8_t retries)
     _pin = pin;
     _type = type;
     _retries = retries;
-    _unit = Celsius; // Default temperature unit
 }
 
 // Initialize the sensor (set pin mode)
 void MyDHT::begin()
 {
     pinMode(_pin, INPUT_PULLUP);
+}
+
+/*
+  Read sensor data with retry mechanism
+  @return DHTError code
+*/
+DHTError MyDHT::read()
+{
+    DHTError err;
+
+    for (uint8_t attempt = 0; attempt < _retries; attempt++)
+    {
+        err = readOnce();
+        if (err == DHT_OK)
+            return DHT_OK;
+        delay(50); // Short delay before retry
+    }
+
+    return err;
 }
 
 /*
@@ -99,87 +117,72 @@ DHTError MyDHT::readOnce()
 }
 
 /*
-  Read sensor data with retry mechanism
-  @return DHTError code
-*/
-DHTError MyDHT::read()
-{
-    DHTError err;
-
-    for (uint8_t attempt = 0; attempt < _retries; attempt++)
-    {
-        err = readOnce();
-        if (err == DHT_OK)
-            return DHT_OK;
-        delay(50); // Short delay before retry
-    }
-
-    return err;
-}
-
-/*
   Get last read humidity
   @return Relative humidity (%)
 */
 float MyDHT::getHumidity()
 {
+    float hum;
     if (_type == DHT11)
     {
-        return _byte1 + _byte2 / 10.0;
+        hum = _byte1 + _byte2 / 10.0;
     }
     else // DHT22
     {
         uint16_t raw = (_byte1 << 8) | _byte2;
-        return raw * 0.1;
+        hum = raw * 0.1;
     }
+
+    hum += _humidityOffset;
+
+    // Clamp to 0–100%
+    if (hum < 0.0)
+        hum = 0.0;
+    if (hum > 100.0)
+        hum = 100.0;
+
+    return hum;
 }
 
 /*
   Get last read temperature in Celsius
   @return Temperature in °C
 */
-float MyDHT::getTemperatureC()
+float MyDHT::getTemperature(TempUnit unit)
 {
-    _unit = Celsius;
+    float tempC;
+
     if (_type == DHT11)
     {
-        return _byte3 + _byte4 / 10.0;
+        tempC = _byte3 + _byte4 / 10.0;
     }
     else // DHT22
     {
         uint16_t raw = ((_byte3 & 0x7F) << 8) | _byte4;
-        float temp = raw * 0.1;
+        tempC = raw * 0.1;
 
         // Check for negative temperature
         if (_byte3 & 0x80)
         {
-            temp = -temp;
+            tempC = -tempC;
         }
-
-        return temp;
     }
-}
 
-/*
-  Get last read temperature in Fahrenheit
-  @return Temperature in °F
-*/
-float MyDHT::getTemperatureF()
-{
-    _unit = Fahrenheit;
-    float tempC = getTemperatureC();
-    return tempC * 9.0 / 5.0 + 32;
-}
+    tempC += _tempOffsetC; // apply calibration offset
 
-/*
-  Get last read temperature in Kelvin
-  @return Temperature in K
-*/
-float MyDHT::getTemperatureK()
-{
-    _unit = Kelvin;
-    float tempC = getTemperatureC();
-    return tempC + 273.15;
+    switch (unit)
+    {
+    case Celsius:
+        return tempC;
+    case Fahrenheit:
+        return tempC * 9.0 / 5.0 + 32;
+    case Kelvin:
+        return tempC + 273.15;
+    default:
+        return tempC;
+    }
+
+    return tempC;
 }
 
 /*
@@ -187,9 +190,9 @@ float MyDHT::getTemperatureK()
   Uses Magnus formula
   @return Dew point in current temperature unit
 */
-float MyDHT::getDewPoint()
+float MyDHT::getDewPoint(TempUnit unit)
 {
-    float T = getTemperatureC();
+    float T = getTemperature(Celsius);
     float RH = getHumidity();
     double a = 17.27;
     double b = 237.7;
@@ -197,7 +200,7 @@ float MyDHT::getDewPoint()
     double dewPointC = (b * alpha) / (a - alpha);
 
     // Convert to selected unit
-    switch (_unit)
+    switch (unit)
     {
     case Celsius:
         return dewPointC;
@@ -205,6 +208,8 @@ float MyDHT::getDewPoint()
         return dewPointC * 9.0 / 5.0 + 32;
     case Kelvin:
         return dewPointC + 273.15;
+    default:
+        return dewPointC;
     }
 }
 
@@ -213,9 +218,9 @@ float MyDHT::getDewPoint()
   Uses Rothfusz regression formula
   @return Heat Index in current temperature unit
 */
-float MyDHT::getHeatIndex()
+float MyDHT::getHeatIndex(TempUnit unit)
 {
-    float T = (_unit == Fahrenheit) ? getTemperatureF() : getTemperatureC() * 9.0 / 5.0 + 32; // HI formula u F
+    float T = getTemperature(Fahrenheit); // HI formula in F
     float RH = getHumidity();
 
     // Simple formula for HI < 80°F
@@ -228,7 +233,7 @@ float MyDHT::getHeatIndex()
     }
 
     // Convert to user-selected unit
-    switch (_unit)
+    switch (unit)
     {
     case Celsius:
         return (HI - 32) * 5.0 / 9.0;
@@ -236,7 +241,25 @@ float MyDHT::getHeatIndex()
         return HI;
     case Kelvin:
         return (HI - 32) * 5.0 / 9.0 + 273.15;
+    default:
+        return (HI - 32) * 5.0 / 9.0;
     }
+}
+
+/*
+  Set temperature calibration offset
+*/
+void MyDHT::setTemperatureOffset(float offsetC)
+{
+    _tempOffsetC = offsetC;
+}
+
+/*
+  Set humidity calibration offset
+*/
+void MyDHT::setHumidityOffset(float offset)
+{
+    _humidityOffset = offset;
 }
 
 /*

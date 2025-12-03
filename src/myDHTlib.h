@@ -6,86 +6,85 @@
 // Sensor type
 enum DHTType
 {
-    DHT11,
-    DHT22
+  DHT11,
+  DHT22
 };
 
 // Error codes returned by read()
 enum DHTError
 {
-    DHT_OK = 0,        // Read successful
-    DHT_NO_RESPONSE,   // Sensor did not respond to start signal
-    DHT_ACK_TIMEOUT,   // Sensor ACK not received in time
-    DHT_CHECKSUM_FAIL, // Checksum mismatch
-    DHT_BIT_TIMEOUT    // Timeout while reading a bit
+  DHT_OK = 0,        // Read successful
+  DHT_NO_RESPONSE,   // Sensor did not respond to start signal
+  DHT_ACK_TIMEOUT,   // Sensor ACK not received in time
+  DHT_CHECKSUM_FAIL, // Checksum mismatch
+  DHT_BIT_TIMEOUT    // Timeout while reading a bit
 };
 
 // Temperature units
 enum TempUnit
 {
-    Celsius,
-    Fahrenheit,
-    Kelvin
+  Celsius,
+  Fahrenheit,
+  Kelvin
 };
 
 class MyDHT
 {
 public:
-    /*
-      Constructor
-      @param pin   Arduino pin number
-      @param type  Sensor type (DHT11 or DHT22)
-      @param retries Number of retry attempts if read fails (default 3)
-    */
-    MyDHT(uint8_t pin, DHTType type, uint8_t retries = 3);
+  /*
+    Constructor
+    @param pin   Arduino pin number
+    @param type  Sensor type (DHT11 or DHT22)
+    @param retries Number of retry attempts if read fails (default 3)
+  */
+  MyDHT(uint8_t pin, DHTType type, uint8_t retries = 3);
 
-    // Initialize the sensor (set pin mode, etc.)
-    void begin();
+  // Initialize the sensor (set pin mode, etc.)
+  void begin();
 
-    // Returns last read temperature in Celsius
-    float getTemperatureC();
+  // Returns last read temperature in Celsius
+  float getTemperature(TempUnit unit = Celsius);
 
-    // Returns last read temperature in Fahrenheit
-    float getTemperatureF();
+  // Returns last relative humidity in %
+  float getHumidity();
 
-    // Returns last read temperature in Kelvin
-    float getTemperatureK();
+  /*
+    Calculate dew point based on last read temperature and humidity
+    Uses the _unit member to determine input temperature unit
+    Returns dew point in the same unit as _unit
+  */
+  float getDewPoint(TempUnit unit = Celsius);
 
-    // Returns last relative humidity in %
-    float getHumidity();
+  /*
+    Calculate heat index (feels-like temperature) based on last read temperature and humidity
+    Internally converts temperature to Fahrenheit for formula, returns in same unit as _unit
+  */
+  float getHeatIndex(TempUnit unit = Celsius);
 
-    /*
-      Calculate dew point based on last read temperature and humidity
-      Uses the _unit member to determine input temperature unit
-      Returns dew point in the same unit as _unit
-    */
-    float getDewPoint();
+  // Read new data from sensor, returns DHTError
+  DHTError read();
 
-    /*
-      Calculate heat index (feels-like temperature) based on last read temperature and humidity
-      Internally converts temperature to Fahrenheit for formula, returns in same unit as _unit
-    */
-    float getHeatIndex();
+  // Set number of retry attempts if read fails
+  void setRetries(uint8_t retries);
 
-    // Read new data from sensor, returns DHTError
-    DHTError read();
-
-    // Set number of retry attempts if read fails
-    void setRetries(uint8_t retries);
+  // Adjust calibration offset
+  void setTemperatureOffset(float offsetC);
+  void setHumidityOffset(float offset);
 
 private:
-    uint8_t _pin;             // Pin where sensor is connected
-    DHTType _type;            // Sensor type
-    uint8_t _retries;         // Number of retries
-    TempUnit _unit = Celsius; // Temperature unit for calculations
+  uint8_t _pin;                // Pin where sensor is connected
+  DHTType _type;               // Sensor type
+  uint8_t _retries;            // Number of retries
+  float _tempOffsetC = 0.0;    // Calibration offset
+  float _humidityOffset = 0.0; // Humidity offset
 
-    // Low-level read functions
-    int readOneBit();    // Reads a single bit from the sensor
-    uint8_t readByte();  // Reads a byte (8 bits) from the sensor
-    DHTError readOnce(); // Performs a single read attempt
+  // Low-level read functions
+  int readOneBit();    // Reads a single bit from the sensor
+  uint8_t readByte();  // Reads a byte (8 bits) from the sensor
+  DHTError readOnce(); // Performs a single read attempt
 
-    // Last read bytes from the sensor
-    uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;
+  // Last read bytes from the sensor
+  uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;
 };
 
 #endif

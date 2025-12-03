@@ -32,9 +32,9 @@ void loop()
   if (err == DHT_OK)
   {
     // Temperature in all units
-    float tempC = dht.getTemperatureC();
-    float tempF = dht.getTemperatureF();
-    float tempK = dht.getTemperatureK();
+    float tempC = dht.getTemperature(Celsius);
+    float tempF = dht.getTemperature(Fahrenheit);
+    float tempK = dht.getTemperature(Kelvin);
 
     Serial.print("Temperature: ");
     Serial.print(tempC);
