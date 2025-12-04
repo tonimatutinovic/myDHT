@@ -36,6 +36,16 @@ struct DHTRawData
   unsigned long lowTimes[40];
 };
 
+// DHT data
+struct DHTData
+{
+  float temp;
+  float hum;
+  float dew;
+  float hi;
+  DHTError status;
+};
+
 class MyDHT
 {
 public:
@@ -82,12 +92,17 @@ public:
   // Returns raw data read from the sensor
   DHTRawData getRawData();
 
+  // Returns data package
+  DHTData getData(TempUnit unit = Celsius);
+
 private:
   uint8_t _pin;                // Pin where sensor is connected
   DHTType _type;               // Sensor type
   uint8_t _retries;            // Number of retries
   float _tempOffsetC = 0.0;    // Calibration offset
   float _humidityOffset = 0.0; // Humidity offset
+  DHTData _lastValidData;
+  bool _hasLastValidData = false;
 
   // Low-level read functions
   int readOneBit(int counter);   // Reads a single bit from the sensor
@@ -96,6 +111,8 @@ private:
 
   // Last read bytes from the sensor
   uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;
+
+  // Last read puls duration times
   unsigned long _highTimes[40];
   unsigned long _lowTimes[40];
 };

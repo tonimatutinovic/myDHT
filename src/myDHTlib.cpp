@@ -252,6 +252,40 @@ float MyDHT::getHeatIndex(TempUnit unit)
     }
 }
 
+DHTData MyDHT::getData(TempUnit unit)
+{
+    DHTData data;
+
+    DHTError err = read();
+    data.status = err;
+
+    if (err != DHT_OK)
+    {
+        if (_hasLastValidData)
+        {
+            data = _lastValidData;
+            data.status = err;
+            return data;
+        }
+
+        data.temp = NAN;
+        data.hum = NAN;
+        data.dew = NAN;
+        data.hi = NAN;
+        return data;
+    }
+
+    data.temp = getTemperature(unit);
+    data.hum = getHumidity();
+    data.dew = getDewPoint(unit);
+    data.hi = getHeatIndex(unit);
+
+    _lastValidData = data;
+    _hasLastValidData = true;
+
+    return data;
+}
+
 /*
   Set temperature calibration offset
 */
