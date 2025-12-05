@@ -2,7 +2,7 @@
   MyDHT Library
   Supports DHT11 and DHT22
   Provides temperature (C/F/K), humidity, dew point, heat index
-  Author: Your Name
+  Author: Toni Matutinović
   Version: 1.0
 */
 
@@ -26,6 +26,19 @@ MyDHT::MyDHT(uint8_t pin, DHTType type, uint8_t retries)
 void MyDHT::begin()
 {
     pinMode(_pin, INPUT_PULLUP);
+
+    // Set timing parameters depending on sensor type
+    if (_type == DHT11)
+    {
+        _timings = {18, 5000, 120, 50};
+    }
+    else
+    { // DHT22
+        _timings = {1, 1000, 80, 40};
+    }
+
+    _state = IDLE;
+    _hasLastValidData = false;
 }
 
 /*
@@ -35,13 +48,14 @@ void MyDHT::begin()
 DHTError MyDHT::read()
 {
     DHTError err;
+    uint16_t retryDelay = (_type == DHT11) ? 50 : 20;
 
     for (uint8_t attempt = 0; attempt < _retries; attempt++)
     {
         err = readOnce();
         if (err == DHT_OK)
             return DHT_OK;
-        delay(50); // Short delay before retry
+        delay(retryDelay); // Short delay before retry
     }
 
     return err;
@@ -56,7 +70,7 @@ DHTError MyDHT::readOnce()
     // Send start signal
     pinMode(_pin, OUTPUT);
     digitalWrite(_pin, LOW);
-    delay(20); // Pull LOW for 20ms
+    delay(_timings.startLowMs); // Pull LOW for 20ms
     digitalWrite(_pin, HIGH);
     delayMicroseconds(30); // Then pull HIGH for 30µs
     pinMode(_pin, INPUT_PULLUP);
@@ -65,7 +79,7 @@ DHTError MyDHT::readOnce()
     unsigned long timer = micros();
     while (digitalRead(_pin) == HIGH)
     {
-        if (micros() - timer > 1000) // Timeout
+        if (micros() - timer > _timings.ackTimeoutUs) // Timeout
         {
             return DHT_NO_RESPONSE;
         }
@@ -74,7 +88,7 @@ DHTError MyDHT::readOnce()
     timer = micros();
     while (digitalRead(_pin) == LOW)
     {
-        if (micros() - timer > 1000)
+        if (micros() - timer > _timings.ackTimeoutUs)
         {
             return DHT_ACK_TIMEOUT;
         }
@@ -83,12 +97,24 @@ DHTError MyDHT::readOnce()
     timer = micros();
     while (digitalRead(_pin) == HIGH)
     {
-        if (micros() - timer > 1000)
+        if (micros() - timer > _timings.ackTimeoutUs)
         {
             return DHT_ACK_TIMEOUT;
         }
     }
 
+    return read5Bytes();
+}
+
+/*
+  Reads 5 bytes of data from the DHT sensor
+  Internally calls readByte() for each byte and verifies the checksum
+  @return DHT_OK on success, otherwise one of the DHTError codes:
+        DHT_BIT_TIMEOUT if a bit read timed out
+        DHT_CHECKSUM_FAIL if checksum validation fails
+*/
+DHTError MyDHT::read5Bytes()
+{
     int bitCounter = 0;
 
     // Read 5 bytes
@@ -320,7 +346,7 @@ int MyDHT::readOneBit(int counter)
     // Wait for LOW signal
     while (digitalRead(_pin) == HIGH)
     {
-        if (micros() - t > 120) // 120µs timeout
+        if (micros() - t > _timings.bitTimeoutUs) // 120µs timeout
             return -1;
     }
 
@@ -328,7 +354,7 @@ int MyDHT::readOneBit(int counter)
     // Measure LOW duration
     while (digitalRead(_pin) == LOW)
     {
-        if (micros() - t > 100) // 100µs timeout
+        if (micros() - t > _timings.bitTimeoutUs) // 120µs timeout
             return -1;
     }
     unsigned long lowDuration = micros() - t;
@@ -338,14 +364,14 @@ int MyDHT::readOneBit(int counter)
     // Start HIGH timer
     while (digitalRead(_pin) == HIGH)
     {
-        if (micros() - highStart > 120) // 120µs timeout
+        if (micros() - highStart > _timings.bitTimeoutUs) // 120µs timeout
             return -1;
     }
 
     unsigned long highDuration = micros() - highStart;
     _highTimes[counter] = highDuration;
     // Determine bit value based on HIGH pulse duration
-    if (highDuration > 40)
+    if (highDuration > _timings.highThresholdUs)
         return 1;
     else
         return 0;
@@ -397,4 +423,105 @@ DHTRawData MyDHT::getRawData()
     }
 
     return data;
+}
+
+/*
+  Starts an asynchronous read from the DHT sensor.
+  @param cb User-provided callback function to be called when the read is complete.
+  Sets the internal state to START_SIGNAL and begins the start signal sequence.
+*/
+void MyDHT::startAsyncRead(DHTCallback cb)
+{
+    _callback = cb;          // Store the user-defined callback function
+    _state = START_SIGNAL;   // Set the state to START_SIGNAL to begin the start sequence
+    pinMode(_pin, OUTPUT);   // Set the pin as OUTPUT to send the start signal
+    digitalWrite(_pin, LOW); // Pull the pin LOW to signal the sensor to start sending data
+    _timer = millis();       // Record the current time to measure start signal duration
+}
+
+/*
+  Processes the asynchronous state machine.
+  Should be called repeatedly (e.g., inside loop()) until isReading() returns false.
+  Handles:
+    - START_SIGNAL: Sends start signal to sensor
+    - WAIT_ACK: Waits for sensor acknowledgment
+    - READ_BITS_BLOCKING: Reads 5 bytes from sensor and calls the callback
+    - ERROR_STATE: Handles errors and calls the callback with error status
+*/
+void MyDHT::processAsync()
+{
+    switch (_state)
+    {
+    case START_SIGNAL:
+        // Wait for the start signal (LOW) to last at least 20ms
+        if (millis() - _timer >= _timings.startLowMs)
+        {
+            digitalWrite(_pin, HIGH); // Pull the pin HIGH to finish the start signal
+            delayMicroseconds(30);
+            pinMode(_pin, INPUT_PULLUP); // Switch pin to INPUT_PULLUP to read sensor response
+            _timer = micros();           // Record the start time for waiting ACK signal
+            delayMicroseconds(80);
+            _state = WAIT_ACK; // Change state to WAIT_ACK
+        }
+        break;
+
+    case WAIT_ACK:
+        // Wait for the sensor to pull the line LOW as ACK
+        if (digitalRead(_pin) == LOW)
+        {
+            _state = READ_BITS_BLOCKING; // ACK received, move to reading bits
+        }
+        // Timeout: sensor did not respond
+        else if (micros() - _timer > _timings.ackTimeoutUs)
+        {
+            _state = ERROR_STATE;
+        }
+        break;
+
+    case READ_BITS_BLOCKING:
+        DHTError e = read5Bytes(); // Read all 5 bytes from the sensor
+        DHTData data = makeData();
+        data.status = e;
+        if (_callback)
+            _callback(data); // Call user-defined callback with the data
+        _state = IDLE;
+        break;
+
+    case ERROR_STATE:
+        // Handle errors such as no response
+        DHTData d;
+        d.status = DHT_NO_RESPONSE;
+        if (_callback)
+            _callback(d); // Notify user via callback
+        _state = IDLE;    // Reset state
+        break;
+
+    default:
+        break;
+    }
+}
+
+/*
+  Checks if an asynchronous read is still in progress.
+  @return true if a read is ongoing, false if idle
+*/
+bool MyDHT::isReading()
+{
+    return _state != IDLE;
+}
+
+/*
+  Packages the last read raw bytes into a DHTData structure.
+  Calculates temperature, humidity, dew point, and heat index.
+  @return DHTData structure with all calculated values and status set to DHT_OK
+*/
+DHTData MyDHT::makeData(TempUnit unit)
+{
+    DHTData d;
+    d.temp = getTemperature(unit);
+    d.hum = getHumidity();
+    d.dew = getDewPoint(unit);
+    d.hi = getHeatIndex(unit);
+    d.status = DHT_OK;
+    return d;
 }

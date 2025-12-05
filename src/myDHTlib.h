@@ -46,6 +46,28 @@ struct DHTData
   DHTError status;
 };
 
+// Async callback typedef
+typedef void (*DHTCallback)(DHTData);
+
+// Async states
+enum DHTAsyncState
+{
+  IDLE,
+  START_SIGNAL,
+  WAIT_ACK,
+  READ_BITS_BLOCKING,
+  ERROR_STATE
+};
+
+// Timings
+struct DHTTimings
+{
+  uint16_t startLowMs;
+  uint16_t ackTimeoutUs;
+  uint16_t bitTimeoutUs;
+  uint16_t highThresholdUs;
+};
+
 class MyDHT
 {
 public:
@@ -95,19 +117,31 @@ public:
   // Returns data package
   DHTData getData(TempUnit unit = Celsius);
 
+  // Helper function to create a DHTData struct from the last read bytes
+  DHTData makeData(TempUnit unit = Celsius);
+
+  // Async API
+  void startAsyncRead(DHTCallback cb); // Start an asynchronous sensor read
+  void processAsync();                 // Must be called repeatedly (e.g., in loop()) to advance async read state machine
+  bool isReading();                    // Returns true if an asynchronous read is currently in progress
+
 private:
-  uint8_t _pin;                // Pin where sensor is connected
-  DHTType _type;               // Sensor type
-  uint8_t _retries;            // Number of retries
+  uint8_t _pin;        // Pin where sensor is connected
+  DHTType _type;       // Sensor type
+  uint8_t _retries;    // Number of retries
+  DHTTimings _timings; // Timing parameters depending on sensor type
+
   float _tempOffsetC = 0.0;    // Calibration offset
   float _humidityOffset = 0.0; // Humidity offset
-  DHTData _lastValidData;
-  bool _hasLastValidData = false;
+
+  DHTData _lastValidData;         // Last successfully read sensor data
+  bool _hasLastValidData = false; // Flag indicating if _lastValidData contains valid data
 
   // Low-level read functions
   int readOneBit(int counter);   // Reads a single bit from the sensor
   uint8_t readByte(int counter); // Reads a byte (8 bits) from the sensor
   DHTError readOnce();           // Performs a single read attempt
+  DHTError read5Bytes();         // Reads 5 bytes from the sensor
 
   // Last read bytes from the sensor
   uint8_t _byte1, _byte2, _byte3, _byte4, _byte5;
@@ -115,6 +149,10 @@ private:
   // Last read puls duration times
   unsigned long _highTimes[40];
   unsigned long _lowTimes[40];
+
+  DHTAsyncState _state = IDLE;     // Current state of the asynchronous read state machine
+  DHTCallback _callback = nullptr; // User-provided callback function for async read completion
+  unsigned long _timer = 0;        // Timer used for measuring delays and timeouts in async reading
 };
 
 #endif
