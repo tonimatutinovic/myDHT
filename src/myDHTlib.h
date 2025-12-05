@@ -64,6 +64,7 @@ struct DHTTimings
 {
   uint16_t startLowMs;
   uint16_t ackTimeoutUs;
+  uint16_t ackDoneUs;
   uint16_t bitTimeoutUs;
   uint16_t highThresholdUs;
 };

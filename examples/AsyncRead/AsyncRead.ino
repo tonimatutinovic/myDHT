@@ -48,7 +48,8 @@ void loop()
     static unsigned long lastRead = 0;
 
     // DHT11 limitation: max 1Hz
-    if ((millis() - lastRead >= 1000) && !dht.isReading()) {
+    if ((millis() - lastRead >= 1000) && !dht.isReading())
+    {
         lastRead = millis();
         dht.startAsyncRead(dhtCallback);
     }

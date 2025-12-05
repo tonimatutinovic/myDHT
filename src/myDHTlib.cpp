@@ -30,11 +30,11 @@ void MyDHT::begin()
     // Set timing parameters depending on sensor type
     if (_type == DHT11)
     {
-        _timings = {18, 5000, 120, 50};
+        _timings = {18, 5000, 80, 120, 50};
     }
     else
     { // DHT22
-        _timings = {1, 1000, 80, 40};
+        _timings = {1, 1000, 80, 80, 40};
     }
 
     _state = IDLE;
@@ -460,21 +460,23 @@ void MyDHT::processAsync()
             delayMicroseconds(30);
             pinMode(_pin, INPUT_PULLUP); // Switch pin to INPUT_PULLUP to read sensor response
             _timer = micros();           // Record the start time for waiting ACK signal
-            delayMicroseconds(80);
-            _state = WAIT_ACK; // Change state to WAIT_ACK
+            _state = WAIT_ACK;           // Change state to WAIT_ACK
         }
         break;
 
     case WAIT_ACK:
-        // Wait for the sensor to pull the line LOW as ACK
-        if (digitalRead(_pin) == LOW)
+        if (micros() - _timer >= _timings.ackDoneUs)
         {
-            _state = READ_BITS_BLOCKING; // ACK received, move to reading bits
-        }
-        // Timeout: sensor did not respond
-        else if (micros() - _timer > _timings.ackTimeoutUs)
-        {
-            _state = ERROR_STATE;
+            // Wait for the sensor to pull the line LOW (after ACK)
+            if (digitalRead(_pin) == LOW)
+            {
+                _state = READ_BITS_BLOCKING; // ACK received, move to reading bits
+            }
+            // Timeout: sensor did not respond
+            else if (micros() - _timer > _timings.ackTimeoutUs)
+            {
+                _state = ERROR_STATE;
+            }
         }
         break;
 
