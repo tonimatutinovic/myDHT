@@ -12,7 +12,6 @@ MyDHT dht(DHT_PIN); // Auto detect type
 void setup()
 {
     Serial.begin(115200);
-    //delay(2000);
 
     // --- AUTO DETECT ---
     dht.begin();

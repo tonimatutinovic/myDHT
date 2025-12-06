@@ -32,18 +32,7 @@ void MyDHT::begin()
 
     if (_type == DHT_AUTO)
     {
-        _timings = {18, 5000, 80, 120, 50};
         detectType(); // one blocking read (~25ms)
-    }
-
-    // Set timing parameters depending on sensor type
-    if (_type == DHT11)
-    {
-        _timings = {18, 5000, 80, 120, 50};
-    }
-    else
-    { // DHT22
-        _timings = {1, 1000, 80, 80, 40};
     }
 
     _state = IDLE;
@@ -537,35 +526,76 @@ DHTData MyDHT::makeData(TempUnit unit)
     return d;
 }
 
+/*
+  Attempts to automatically detect the sensor type (DHT11 or DHT22).
+  Performs a single read to get raw bytes and applies a heuristic:
+  - DHT11 typically has byte2 and byte4 equal to 0 and small temperature/humidity values.
+  - DHT22 has non-zero decimal bytes or larger values.
+  If the read fails, type remains DHT_AUTO for later retry.
+*/
 void MyDHT::detectType()
 {
-    // One "hidden" read for getting raw bytes
-    DHTError err = readOnce();
+    const uint8_t maxAttempts = 3; // Maximum number of attempts
+    DHTError err;
 
-    // If readOnce returns error, assume DHT22
-    if (err != DHT_OK)
+    for (uint8_t attempt = 0; attempt < maxAttempts; attempt++)
     {
-        Serial.println("Warning: sensor did not respond during detectType(). Retrying later...");
-        _type = DHT_AUTO;
+        // Set temporary timings to ensure a safe read for autodetect
+        _timings = {18, 5000, 80, 120, 50};
+
+        // Perform a single read from the sensor
+        err = readOnce();
+        if (err != DHT_OK)
+        {
+            delay(50); // Short delay before retrying
+            continue;
+        }
+
+        // Verify checksum of the 5 bytes read
+        uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
+        if (sum != _byte5)
+        {
+            delay(50); // Checksum failed, retry
+            continue;
+        }
+
+        // - DHT11 typically has byte2 and byte4 equal to 0 (decimal parts)
+        // - Temperature and humidity integer parts are within small range
+        bool looksLikeDHT11 =
+            (_byte2 == 0 || _byte2 <= 5) && // DHT11 decimal part usually 0
+            (_byte4 == 0 || _byte4 <= 5) &&
+            (_byte1 <= 100) &&
+            (_byte3 <= 60);
+
+        // Set the detected type
+        _type = looksLikeDHT11 ? DHT11 : DHT22;
+
+        // Apply final timings
+        if (_type == DHT11)
+            _timings = {18, 5000, 80, 120, 50};
+        else // DHT22
+            _timings = {1, 1000, 80, 80, 40};
+
         return;
     }
 
-    // DHT11 always return byte2 = 0 and byte4 = 0, also values are small
-    bool looksLikeDHT11 =
-        (_byte2 == 0 || _byte2 <= 5) && // DHT11 decimal često 0
-        (_byte4 == 0 || _byte4 <= 5) &&
-        (_byte1 <= 100) &&
-        (_byte3 <= 60);
-
-    if (looksLikeDHT11)
-        _type = DHT11;
-    else
-        _type = DHT22;
+    // If no successful detection, leave type as AUTO for manual retry later
+    _type = DHT_AUTO;
 }
 
+/*
+  Getter for sensor type
+*/
 DHTType MyDHT::getType() { return _type; }
+
+/*
+  Setter for sensor type
+*/
 void MyDHT::setType(DHTType type) { _type = type; }
 
+/*
+  Return minimum recommended interval between reads (ms)
+*/
 uint16_t MyDHT::getMinReadInterval()
 {
     return (_type == DHT11) ? 2000 : 1000; // ms
