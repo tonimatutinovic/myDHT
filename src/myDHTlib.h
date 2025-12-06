@@ -6,6 +6,7 @@
 // Sensor type
 enum DHTType
 {
+  DHT_AUTO,
   DHT11,
   DHT22
 };
@@ -78,7 +79,7 @@ public:
     @param type  Sensor type (DHT11 or DHT22)
     @param retries Number of retry attempts if read fails (default 3)
   */
-  MyDHT(uint8_t pin, DHTType type, uint8_t retries = 3);
+  MyDHT(uint8_t pin, DHTType type = DHT_AUTO, uint8_t retries = 3);
 
   // Initialize the sensor (set pin mode, etc.)
   void begin();
@@ -126,11 +127,18 @@ public:
   void processAsync();                 // Must be called repeatedly (e.g., in loop()) to advance async read state machine
   bool isReading();                    // Returns true if an asynchronous read is currently in progress
 
+  // Getter/Setter for sensor type
+  DHTType getType();
+  void setType(DHTType type);
+
+  // Minimum wait time between two readings (depends on sensor type)
+  uint16_t getMinReadInterval();
+
 private:
-  uint8_t _pin;        // Pin where sensor is connected
-  DHTType _type;       // Sensor type
-  uint8_t _retries;    // Number of retries
-  DHTTimings _timings; // Timing parameters depending on sensor type
+  uint8_t _pin;             // Pin where sensor is connected
+  DHTType _type = DHT_AUTO; // Sensor type
+  uint8_t _retries;         // Number of retries
+  DHTTimings _timings;      // Timing parameters depending on sensor type
 
   float _tempOffsetC = 0.0;    // Calibration offset
   float _humidityOffset = 0.0; // Humidity offset
@@ -154,6 +162,8 @@ private:
   DHTAsyncState _state = IDLE;     // Current state of the asynchronous read state machine
   DHTCallback _callback = nullptr; // User-provided callback function for async read completion
   unsigned long _timer = 0;        // Timer used for measuring delays and timeouts in async reading
+
+  void detectType(); // Detects sensor type DHT11/DHT22
 };
 
 #endif

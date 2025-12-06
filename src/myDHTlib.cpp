@@ -27,6 +27,15 @@ void MyDHT::begin()
 {
     pinMode(_pin, INPUT_PULLUP);
 
+    // Delay for sensor stabilization
+    delay(3000);
+
+    if (_type == DHT_AUTO)
+    {
+        _timings = {18, 5000, 80, 120, 50};
+        detectType(); // one blocking read (~25ms)
+    }
+
     // Set timing parameters depending on sensor type
     if (_type == DHT11)
     {
@@ -526,4 +535,38 @@ DHTData MyDHT::makeData(TempUnit unit)
     d.hi = getHeatIndex(unit);
     d.status = DHT_OK;
     return d;
+}
+
+void MyDHT::detectType()
+{
+    // One "hidden" read for getting raw bytes
+    DHTError err = readOnce();
+
+    // If readOnce returns error, assume DHT22
+    if (err != DHT_OK)
+    {
+        Serial.println("Warning: sensor did not respond during detectType(). Retrying later...");
+        _type = DHT_AUTO;
+        return;
+    }
+
+    // DHT11 always return byte2 = 0 and byte4 = 0, also values are small
+    bool looksLikeDHT11 =
+        (_byte2 == 0 || _byte2 <= 5) && // DHT11 decimal često 0
+        (_byte4 == 0 || _byte4 <= 5) &&
+        (_byte1 <= 100) &&
+        (_byte3 <= 60);
+
+    if (looksLikeDHT11)
+        _type = DHT11;
+    else
+        _type = DHT22;
+}
+
+DHTType MyDHT::getType() { return _type; }
+void MyDHT::setType(DHTType type) { _type = type; }
+
+uint16_t MyDHT::getMinReadInterval()
+{
+    return (_type == DHT11) ? 2000 : 1000; // ms
 }
