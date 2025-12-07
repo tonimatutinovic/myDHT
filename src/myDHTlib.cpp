@@ -52,10 +52,15 @@ DHTError MyDHT::read()
     {
         err = readOnce();
         if (err == DHT_OK)
+        {
+            setError(DHT_OK);
+            _failureCount = 0;
             return DHT_OK;
+        }
         delay(retryDelay); // Short delay before retry
     }
 
+    setError(err);
     return err;
 }
 
@@ -79,7 +84,8 @@ DHTError MyDHT::readOnce()
     {
         if (micros() - timer > _timings.ackTimeoutUs) // Timeout
         {
-            return DHT_NO_RESPONSE;
+            setError(DHT_ERROR_NO_RESPONSE);
+            return DHT_ERROR_NO_RESPONSE;
         }
     }
 
@@ -88,7 +94,8 @@ DHTError MyDHT::readOnce()
     {
         if (micros() - timer > _timings.ackTimeoutUs)
         {
-            return DHT_ACK_TIMEOUT;
+            setError(DHT_ERROR_TIMEOUT);
+            return DHT_ERROR_TIMEOUT;
         }
     }
 
@@ -97,7 +104,8 @@ DHTError MyDHT::readOnce()
     {
         if (micros() - timer > _timings.ackTimeoutUs)
         {
-            return DHT_ACK_TIMEOUT;
+            setError(DHT_ERROR_TIMEOUT);
+            return DHT_ERROR_TIMEOUT;
         }
     }
 
@@ -108,8 +116,8 @@ DHTError MyDHT::readOnce()
   Reads 5 bytes of data from the DHT sensor
   Internally calls readByte() for each byte and verifies the checksum
   @return DHT_OK on success, otherwise one of the DHTError codes:
-        DHT_BIT_TIMEOUT if a bit read timed out
-        DHT_CHECKSUM_FAIL if checksum validation fails
+        DHT_ERROR_BIT_TIMEOUT if a bit read timed out
+        DHT_ERROR_CHECKSUM if checksum validation fails
 */
 DHTError MyDHT::read5Bytes()
 {
@@ -118,31 +126,49 @@ DHTError MyDHT::read5Bytes()
     // Read 5 bytes
     _byte1 = readByte(bitCounter);
     if (_byte1 == 0xFF)
-        return DHT_BIT_TIMEOUT;
+    {
+        setError(DHT_ERROR_BIT_TIMEOUT);
+        return DHT_ERROR_BIT_TIMEOUT;
+    }
     bitCounter += 8;
     _byte2 = readByte(bitCounter);
     if (_byte2 == 0xFF)
-        return DHT_BIT_TIMEOUT;
+    {
+        setError(DHT_ERROR_BIT_TIMEOUT);
+        return DHT_ERROR_BIT_TIMEOUT;
+    }
     bitCounter += 8;
     _byte3 = readByte(bitCounter);
     if (_byte3 == 0xFF)
-        return DHT_BIT_TIMEOUT;
+    {
+        setError(DHT_ERROR_BIT_TIMEOUT);
+        return DHT_ERROR_BIT_TIMEOUT;
+    }
     bitCounter += 8;
     _byte4 = readByte(bitCounter);
     if (_byte4 == 0xFF)
-        return DHT_BIT_TIMEOUT;
+    {
+        setError(DHT_ERROR_BIT_TIMEOUT);
+        return DHT_ERROR_BIT_TIMEOUT;
+    }
     bitCounter += 8;
     _byte5 = readByte(bitCounter);
     if (_byte5 == 0xFF)
-        return DHT_BIT_TIMEOUT;
+    {
+        setError(DHT_ERROR_BIT_TIMEOUT);
+        return DHT_ERROR_BIT_TIMEOUT;
+    }
 
     // Verify checksum
     uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
     if (sum != _byte5)
     {
-        return DHT_CHECKSUM_FAIL;
+        setError(DHT_ERROR_CHECKSUM);
+        return DHT_ERROR_CHECKSUM;
     }
 
+    setError(DHT_OK);
+    _failureCount = 0;
     return DHT_OK;
 }
 
@@ -490,7 +516,8 @@ void MyDHT::processAsync()
     case ERROR_STATE:
         // Handle errors such as no response
         DHTData d;
-        d.status = DHT_NO_RESPONSE;
+        setError(DHT_ERROR_NO_RESPONSE);
+        d.status = DHT_ERROR_NO_RESPONSE;
         if (_callback)
             _callback(d); // Notify user via callback
         _state = IDLE;    // Reset state
@@ -594,9 +621,50 @@ DHTType MyDHT::getType() { return _type; }
 void MyDHT::setType(DHTType type) { _type = type; }
 
 /*
-  Return minimum recommended interval between reads (ms)
+  @return minimum recommended interval between reads (ms)
 */
 uint16_t MyDHT::getMinReadInterval()
 {
     return (_type == DHT11) ? 2000 : 1000; // ms
+}
+
+/*
+  Returns the last error code occured
+*/
+DHTError MyDHT::getLastError() const { return _lastError; }
+
+/*
+  Returns the number of consecutive read failures
+*/
+uint16_t MyDHT::getFailureCount() const { return _failureCount; }
+
+/*
+  Returns true if the sensor appears to be connected (less than 5 consecutive failures)
+*/
+bool MyDHT::isConnected() const { return _failureCount < 5; }
+
+/*
+  Converts a DHTError code to a human-readable string.
+  @param err The DHTError code
+  @return const char* describing the error
+*/
+const char *MyDHT::getErrorString(DHTError err)
+{
+    switch (err)
+    {
+    case DHT_OK:
+        return "OK";
+    case DHT_ERROR_TIMEOUT:
+        return "Timeout waiting for signal";
+    case DHT_ERROR_CHECKSUM:
+        return "Checksum mismatch";
+    case DHT_ERROR_NO_RESPONSE:
+        return "Sensor not responding";
+    case DHT_ERROR_BIT_TIMEOUT:
+        return "Timeout while reading a bit";
+    case DHT_ERROR_INTERNAL:
+        return "Unexpected internal failure";
+    default:
+        return "Unknown error";
+    }
 }

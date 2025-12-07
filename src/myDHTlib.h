@@ -14,11 +14,12 @@ enum DHTType
 // Error codes returned by read()
 enum DHTError
 {
-  DHT_OK = 0,        // Read successful
-  DHT_NO_RESPONSE,   // Sensor did not respond to start signal
-  DHT_ACK_TIMEOUT,   // Sensor ACK not received in time
-  DHT_CHECKSUM_FAIL, // Checksum mismatch
-  DHT_BIT_TIMEOUT    // Timeout while reading a bit
+  DHT_OK = 0,            // Read successful
+  DHT_ERROR_NO_RESPONSE, // Sensor did not respond to start signal
+  DHT_ERROR_TIMEOUT,     // Sensor ACK not received in time
+  DHT_ERROR_CHECKSUM,    // Checksum mismatch
+  DHT_ERROR_BIT_TIMEOUT, // Timeout while reading a bit
+  DHT_ERROR_INTERNAL     // Catch-all for unexpected internal failures
 };
 
 // Temperature units
@@ -134,6 +135,11 @@ public:
   // Minimum wait time between two readings (depends on sensor type)
   uint16_t getMinReadInterval();
 
+  DHTError getLastError() const;            // Returns the last error occured
+  uint16_t getFailureCount() const;         // Returns the number of consecutive read failures
+  bool isConnected() const;                 // Returns true if the sensor responded at least once
+  const char *getErrorString(DHTError err); // Converts a DHTError code to a human-readable string
+
 private:
   uint8_t _pin;             // Pin where sensor is connected
   DHTType _type = DHT_AUTO; // Sensor type
@@ -164,6 +170,23 @@ private:
   unsigned long _timer = 0;        // Timer used for measuring delays and timeouts in async reading
 
   void detectType(); // Detects sensor type DHT11/DHT22
+
+  DHTError _lastError = DHT_OK; // Stores the last error code occured
+  uint16_t _failureCount = 0;   // Counts consecutive read failures
+
+  /*
+    Updates the last error and adjusts the failure count.
+      - If err is not DHT_OK, increments _failureCount
+      - If err is DHT_OK, resets _failureCount to 0
+  */
+  inline void setError(DHTError err)
+  {
+    _lastError = err;
+    if (err != DHT_OK)
+      _failureCount++;
+    else
+      _failureCount = 0;
+  }
 };
 
 #endif
