@@ -1,116 +1,147 @@
-# 📘 MyDHT — Advanced Arduino DHT11/DHT22 Library
+# MyDHT – Advanced Arduino Library for DHT11 and DHT22 Sensors
 
-**MyDHT** is an advanced, lightweight, and fully self-implemented Arduino library for **DHT11** and **DHT22** temperature/humidity sensors.
+MyDHT is a self-contained, fully implemented Arduino driver for DHT11 and DHT22 temperature and humidity sensors.  
+It does not rely on any third-party DHT libraries; instead, it manually implements the complete protocol, including start-signal generation, acknowledgment handling, and high-resolution bit-timing measurement.
 
-Unlike typical DHT libraries, **MyDHT manually implements the entire low-level protocol**  
-(start signal → ACK → bit-timing decoding) without using any existing libraries.  
-This makes it ideal for:
+This makes the library suitable for both practical use and educational purposes where full control and transparency are desired.
 
-🟦 Learning how DHT sensors work on the signal level  
-🟦 Building custom or optimized sensor drivers  
-🟦 Having full control over retries, timing, conversion units, and derived metrics  
+## Features
 
----
+### Sensor Support
+- Full support for **DHT11** and **DHT22**
+- Optional **automatic sensor type detection**
+- Configurable retry logic for handling unreliable sensors
 
-## ✨ Current Features
+### Measurements
+- Temperature in Celsius, Fahrenheit, or Kelvin
+- Relative humidity in percent
+- Computed values:
+  - Dew point (Magnus formula)
+  - Heat index (Rothfusz regression)
 
-### ✔ Core Sensor Support
-- Full support for **DHT11**
-- Full support for **DHT22**
-- Manual protocol decoding (no third-party dependencies)
-- Selectable retry count (`setRetries()`)
+### Reliability and Error Handling
+- Detailed error reporting through the `DHTError` enum
+- Last error tracking and error-to-string helper
+- Consecutive failure counter
+- Connection-status helper (`isConnected()`)
 
-### ✔ Temperature & Humidity
-- Temperature in:
-  - **Celsius**
-  - **Fahrenheit**
-  - **Kelvin**
-- Humidity in %
+### Calibration and Validation
+- Temperature and humidity offset calibration
+- Internal clamping and sanity checking for out-of-range readings
+- Optional fail-safe fallback to the last known valid measurement
 
-### ✔ Derived Metrics (Computed Values)
-- 🌡 **Dew Point**
-- 🔥 **Heat Index**  
-- Automatically adapts depending on temperature unit  
-- Correct formulas for both °C and °F
+### Raw Data Access
+- Access to all 5 sensor bytes
+- Access to raw high/low pulse durations for all 40 bits  
+  Useful for debugging or research
 
-### ✔ Configuration
-- Internal temperature unit mode (`_unit`)  
-- Automatically set by `getTemperatureC/F/K()`  
-- Default unit chosen based on global user distribution (Celsius by default)
+### Single-Call Unified API
+- `getData()` returns temperature, humidity, dew point, heat index, and status in one struct
 
-### ✔ Error Handling
-Detailed error codes returned by `read()`:
-- `DHT_OK`
-- `DHT_NO_RESPONSE`
-- `DHT_ACK_TIMEOUT`
-- `DHT_CHECKSUM_FAIL`
-- `DHT_BIT_TIMEOUT`
+### Asynchronous (Non-Blocking) Mode
+- Optional state-machine-based asynchronous read
+- User callback invoked upon completion
+- **Note:** Full non-blocking behavior is not possible due to timing restrictions in the DHT protocol.  
+  The library performs everything that *can* be asynchronous, but the low-level 40-bit read remains timing-critical and therefore executes in a short blocking window.
 
----
+## Installation
 
-## 📂 Repository Structure
-
+Place the library folder into:
 ```
-MyDHT/
-├── examples/
-│  └── BasicRead/BasicRead.ino
-├── src/
-│  ├── myDHTlib.h
-│  └── myDHTlib.cpp
-└── README.md
+Documents/Arduino/libraries/MyDHT
 ```
 
----
-
-## 📝 Basic Usage Example
+## Basic Example
 
 ```cpp
 #include <myDHTlib.h>
 
 const int DHT_PIN = 2;
 
-// For DHT11:
-MyDHT dht(DHT_PIN, DHT11);
-
-// For DHT22:
+// Choose sensor manually:
 // MyDHT dht(DHT_PIN, DHT22);
+// Or let the library detect automatically:
+MyDHT dht(DHT_PIN, DHT_AUTO);
 
 void setup() {
-  Serial.begin(115200);
-  dht.begin();
-  delay(2000);
+    Serial.begin(115200);
+    dht.begin();
 }
 
 void loop() {
-  DHTError err = dht.read();
+    DHTError err = dht.read();
 
-  if (err == DHT_OK) {
-    Serial.print("Temperature (C): ");
-    Serial.println(dht.getTemperatureC());
+    if (err == DHT_OK) {
+        Serial.print("Temperature: ");
+        Serial.println(dht.getTemperature(Celsius));
 
-    Serial.print("Humidity: ");
-    Serial.println(dht.getHumidity());
+        Serial.print("Humidity: ");
+        Serial.println(dht.getHumidity());
 
-    Serial.print("Dew Point: ");
-    Serial.println(dht.getDewPoint());
+        Serial.print("Dew Point: ");
+        Serial.println(dht.getDewPoint(Celsius));
 
-    Serial.print("Heat Index: ");
-    Serial.println(dht.getHeatIndex());
-  } else {
-    Serial.print("Read error: ");
-    Serial.println(err);
-  }
+        Serial.print("Heat Index: ");
+        Serial.println(dht.getHeatIndex(Celsius));
+    }
+    else {
+        Serial.print("Read error: ");
+        Serial.println(dht.getErrorString(err));
+    }
 
-  delay(2000);
+    delay(2000);
 }
 ```
 
-## 🚧 Planned Improvements
- 
-Planned upgrades include:
+## Error Handling
+The library uses a clear and minimal error system:
+- DHT_OK
+- DHT_ERROR_NO_RESPONSE
+- DHT_ERROR_TIMEOUT
+- DHT_ERROR_CHECKSUM
+- DHT_ERROR_BIT_TIMEOUT
+- DHT_ERROR_INTERNAL
+  
+  Helpers:
+  ```cpp
+  dht.getLastError();       // Last error that occurred
+  dht.getFailureCount();    // Number of consecutive failures
+  dht.isConnected();        // True if the sensor has responded at least once
+  dht.getErrorString(err);  // Human-readable error text
+  ```
 
-- Temperature + humidity calibration support
-- Raw data access (raw bytes + raw bit timing)
-- getData() struct API (single call returning all values)
-- Async / non-blocking read mode
-- Auto-detect DHT11 / DHT22
+## Raw Data Access
+```cpp
+DHTRawData raw = dht.getRawData();
+raw.bytes[0..4];      // Raw sensor bytes
+raw.highTimes[0..39]; // High pulse durations in microseconds
+raw.lowTimes[0..39];  // Low pulse durations
+```
+
+## Auto-Detection
+If created with DHT_AUTO, the library attempts to determine whether the sensor is a DHT11 or DHT22 by analyzing returned data.
+If detection fails, the sensor remains in DHT_AUTO mode and detection is retried later.
+
+## Folder structure
+```
+MyDHT/
+├── examples/
+│   ├── BasicRead
+│   ├── CalibratedRead
+│   ├── UnifiedRead
+│   ├── RawRead
+│   ├── ErrorHandlingRead
+│   ├── AsyncRead
+│   └── AutoDetect
+├── src/
+|   ├── myDHTlib.h
+|   └── myDHTlib.cpp
+└── README.md
+```
+
+## Planned Improvements
+Planned upgrades include:
+- Fail-safe / Sanity Validation
+- Debug Mode
+- Memory-Optimized Build
+- Multi-Sensor Support
