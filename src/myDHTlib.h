@@ -2,10 +2,7 @@
 #define MYDHTLIB_H
 
 #include <Arduino.h>
-
-#ifdef DHT_DEBUG_MODE
 #include <stdarg.h> // Needed for variadic debugPrint
-#endif
 
 // Sensor type
 enum DHTType
@@ -154,10 +151,11 @@ public:
   bool isConnected() const;                 // Returns true if the sensor responded at least once
   const char *getErrorString(DHTError err); // Converts a DHTError code to a human-readable string
 
-// Injects simulated raw sensor bytes for testing (used only when DHT_TEST_MODE is enabled).
-#ifdef DHT_TEST_MODE
+  bool testMode = false;  // If true, enables setRawBytes()
+  bool debugMode = false; // If true, enables debugPrint()
+
+  // Injects simulated raw sensor bytes for testing (used only when testMode = true)
   void setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5);
-#endif
 
 private:
   uint8_t _pin;             // Pin where sensor is connected
@@ -209,10 +207,8 @@ private:
       _failureCount = 0;
   }
 
-//  Prints formatted debug messages to Serial with a "[DHT DEBUG]" prefix
-#ifdef DHT_DEBUG_MODE
+  //  Prints formatted debug messages to Serial with a "[DHT DEBUG]" prefix
   void debugPrint(const char *fmt, ...); // Variadic debug print
-#endif
 };
 
 #endif

@@ -27,10 +27,10 @@ void loop()
     case DHT_OK:
         Serial.println(F("OK"));
         break;
-    case DHT_ACK_TIMEOUT:
+    case DHT_ERROR_TIMEOUT:
         Serial.println(F("Timeout"));
         break;
-    case DHT_CHECKSUM_FAIL:
+    case DHT_ERROR_CHECKSUM:
         Serial.println(F("Checksum error"));
         break;
     default:

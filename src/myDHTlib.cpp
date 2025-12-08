@@ -6,8 +6,6 @@
   Version: 1.0
 */
 
-#define DHT_TEST_MODE  // Enables test mode for simulating sensor data
-#define DHT_DEBUG_MODE // Enables debug logging
 #include "myDHTlib.h"
 #include <math.h>
 
@@ -69,7 +67,7 @@ void MyDHT::begin()
 
     if (_type == DHT_AUTO)
     {
-        detectType(); // one blocking read (~25ms)
+        detectType(); // blocking read (~25ms or 50ms)
     }
 
     _state = IDLE;
@@ -82,14 +80,27 @@ void MyDHT::begin()
 */
 DHTError MyDHT::read()
 {
+    // test mode
+    if (testMode)
+    {
+        if (!sanityCheck()) // check simulated bytes
+        {
+            setError(DHT_ERROR_SANITY);
+            return DHT_ERROR_SANITY;
+        }
+        _hasLastValidData = true;
+        setError(DHT_OK);
+        return DHT_OK;
+    }
+
     DHTError err;
     uint16_t retryDelay = (_type == DHT11) ? 50 : 20;
 
     for (uint8_t attempt = 0; attempt < _retries; attempt++)
     {
-#ifdef DHT_DEBUG_MODE
-        debugPrint("Read attempt %d/%d", attempt + 1, _retries);
-#endif
+
+        if (debugMode)
+            debugPrint("Read attempt %d/%d", attempt + 1, _retries);
 
         err = readOnce();
         if (err == DHT_OK)
@@ -111,9 +122,10 @@ DHTError MyDHT::read()
             _hasLastValidData = true;
             return DHT_OK;
         }
-#ifdef DHT_DEBUG_MODE
-        debugPrint("Read result: %s", getErrorString(err));
-#endif
+
+        if (debugMode)
+            debugPrint("Read result: %s", getErrorString(err));
+
         delay(retryDelay); // Short delay before retry
     }
 
@@ -127,9 +139,8 @@ DHTError MyDHT::read()
 */
 DHTError MyDHT::readOnce()
 {
-#ifdef DHT_DEBUG_MODE
-    debugPrint("Starting single read attempt on pin %d", _pin);
-#endif
+    if (debugMode)
+        debugPrint("Starting single read attempt on pin %d", _pin);
 
     // Send start signal
     pinMode(_pin, OUTPUT);
@@ -172,9 +183,8 @@ DHTError MyDHT::readOnce()
 
     DHTError err = read5Bytes(); // Normal mode: read raw data from sensor
 
-#ifdef DHT_DEBUG_MODE
-    debugPrint("readOnce result: %s", getErrorString(err));
-#endif
+    if (debugMode)
+        debugPrint("readOnce result: %s", getErrorString(err));
 
     return err;
 
@@ -229,26 +239,23 @@ DHTError MyDHT::read5Bytes()
         return DHT_ERROR_BIT_TIMEOUT;
     }
 
-#ifdef DHT_DEBUG_MODE
-    debugPrint("Raw bytes: %X %X %X %X %X", _byte1, _byte2, _byte3, _byte4, _byte5);
-#endif
+    if (debugMode)
+        debugPrint("Raw bytes: %X %X %X %X %X", _byte1, _byte2, _byte3, _byte4, _byte5);
 
     // Verify checksum
     uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
     if (sum != _byte5)
     {
         setError(DHT_ERROR_CHECKSUM);
-#ifdef DHT_DEBUG_MODE
-        debugPrint("Checksum mismatch: %X != %X", sum, _byte5);
-#endif
+        if (debugMode)
+            debugPrint("Checksum mismatch: %X != %X", sum, _byte5);
         return DHT_ERROR_CHECKSUM;
     }
 
     setError(DHT_OK);
     _failureCount = 0;
-#ifdef DHT_DEBUG_MODE
-    debugPrint("read5Bytes: OK, checksum verified");
-#endif
+    if (debugMode)
+        debugPrint("read5Bytes: OK, checksum verified");
     return DHT_OK;
 }
 
@@ -642,51 +649,25 @@ DHTData MyDHT::makeData(TempUnit unit)
 */
 void MyDHT::detectType()
 {
-    const uint8_t maxAttempts = 3; // Maximum number of attempts
-    DHTError err;
-
-    for (uint8_t attempt = 0; attempt < maxAttempts; attempt++)
+    // 1) Try reading as DHT22
+    _type = DHT22;
+    _timings = {1, 1000, 80, 80, 40};
+    if (readOnce() == DHT_OK)
     {
-        // Set temporary timings to ensure a safe read for autodetect
-        _timings = {18, 5000, 80, 120, 50};
-
-        // Perform a single read from the sensor
-        err = readOnce();
-        if (err != DHT_OK)
-        {
-            delay(50); // Short delay before retrying
-            continue;
-        }
-
-        // Verify checksum of the 5 bytes read
-        uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
-        if (sum != _byte5)
-        {
-            delay(50); // Checksum failed, retry
-            continue;
-        }
-
-        // - DHT11 typically has byte2 and byte4 equal to 0 (decimal parts)
-        // - Temperature and humidity integer parts are within small range
-        bool looksLikeDHT11 =
-            (_byte2 == 0 || _byte2 <= 5) && // DHT11 decimal part usually 0
-            (_byte4 == 0 || _byte4 <= 5) &&
-            (_byte1 <= 100) &&
-            (_byte3 <= 60);
-
-        // Set the detected type
-        _type = looksLikeDHT11 ? DHT11 : DHT22;
-
-        // Apply final timings
-        if (_type == DHT11)
-            _timings = {18, 5000, 80, 120, 50};
-        else // DHT22
-            _timings = {1, 1000, 80, 80, 40};
-
+        // Valid DHT22 frame → finished
         return;
     }
 
-    // If no successful detection, leave type as AUTO for manual retry later
+    // 2) Try reading as DHT11
+    _type = DHT11;
+    _timings = {18, 5000, 80, 120, 50};
+    if (readOnce() == DHT_OK)
+    {
+        // Valid DHT11 frame → finished
+        return;
+    }
+
+    // If neither worked
     _type = DHT_AUTO;
 }
 
@@ -759,9 +740,8 @@ bool MyDHT::sanityCheck()
     // DHTData object from the current raw bytes
     DHTData d = makeData(Celsius);
 
-#ifdef DHT_DEBUG_MODE
-    debugPrint("Sanity check: Temp=%f, Hum=%f", d.temp, d.hum);
-#endif
+    if (debugMode)
+        debugPrint("Sanity check: Temp=%f, Hum=%f", d.temp, d.hum);
 
     float temp = d.temp;
     float hum = d.hum;
@@ -773,18 +753,16 @@ bool MyDHT::sanityCheck()
     // Reject invalid or out-of-range temperatures
     if (isnan(temp) || temp < minTemp || temp > maxTemp)
     {
-#ifdef DHT_DEBUG_MODE
-        debugPrint("Sanity check failed: Temperature=%f out of range", d.temp);
-#endif
+        if (debugMode)
+            debugPrint("Sanity check failed: Temperature=%f out of range", d.temp);
         return false;
     }
 
     // Reject invalid humidity (must be 0–100%)
     if (isnan(hum) || hum < 0.0f || hum > 100.0f)
     {
-#ifdef DHT_DEBUG_MODE
-        debugPrint("Sanity check failed: Humidity=%f out of range", d.hum);
-#endif
+        if (debugMode)
+            debugPrint("Sanity check failed: Humidity=%f out of range", d.hum);
         return false;
     }
 
@@ -795,23 +773,22 @@ bool MyDHT::sanityCheck()
   Injects raw sensor bytes for controlled testing without a physical DHT sensor.
   Used to verify decoding and sanity-check logic.
 */
-#ifdef DHT_TEST_MODE
 void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5)
 {
+    if (!testMode)
+        return;
+
     _byte1 = b1;
     _byte2 = b2;
     _byte3 = b3;
     _byte4 = b4;
     _byte5 = b5;
 }
-#endif
 
 /*
   Prints formatted debug messages to Serial with a "[DHT DEBUG]" prefix.
   Used for internal library debugging.
-*/
-#ifdef DHT_DEBUG_MODE
-/*
+
   Supports:
     - %f for floats
     - %d for integers
@@ -820,6 +797,9 @@ void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t 
 */
 void MyDHT::debugPrint(const char *fmt, ...)
 {
+    if (!debugMode)
+        return;
+
     va_list args;
     va_start(args, fmt);
 
@@ -878,4 +858,3 @@ void MyDHT::debugPrint(const char *fmt, ...)
     Serial.print("[DHT DEBUG] ");
     Serial.println(buf);
 }
-#endif

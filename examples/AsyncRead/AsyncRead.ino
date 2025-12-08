@@ -8,7 +8,7 @@ const int DHT_PIN = 2;
 // ---------------------
 
 // For DHT11
-MyDHT dht(DHT_PIN, DHT11);
+MyDHT dht(DHT_PIN);
 
 // For DHT22, uncomment the line below and comment out the DHT11 line
 // MyDHT dht(DHT_PIN, DHT22)

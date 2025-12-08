@@ -1,4 +1,3 @@
-#define DHT_DEBUG_MODE  // Enable debug messages
 #include <myDHTlib.h>
 
 const int DHT_PIN = 2;          // Pin where DHT sensor is connected
@@ -6,8 +5,8 @@ MyDHT dht(DHT_PIN, DHT11);      // Create sensor object (DHT11 or DHT22)
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial);             // Wait for Serial on some boards
     dht.begin();                 // Initialize sensor
+    dht.debugMode = true;
 
     Serial.println("=== MyDHT Library DEBUG_MODE Example ===");
 }

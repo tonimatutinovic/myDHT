@@ -62,19 +62,19 @@ void loop()
 
     Serial.println("----------------");
   }
-  else if (err == DHT_NO_RESPONSE)
+  else if (err == DHT_ERROR_NO_RESPONSE)
   {
     Serial.println("Error: Sensor not responding!");
   }
-  else if (err == DHT_ACK_TIMEOUT)
+  else if (err == DHT_ERROR_TIMEOUT)
   {
     Serial.println("Error: ACK timeout!");
   }
-  else if (err == DHT_CHECKSUM_FAIL)
+  else if (err == DHT_ERROR_CHECKSUM)
   {
     Serial.println("Error: Checksum mismatch!");
   }
-  else if (err == DHT_BIT_TIMEOUT)
+  else if (err == DHT_ERROR_BIT_TIMEOUT)
   {
     Serial.println("Error: Bit read timeout!");
   }

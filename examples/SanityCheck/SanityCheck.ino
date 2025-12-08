@@ -1,4 +1,3 @@
-#define DHT_TEST_MODE // Enables synthetic test mode (no real sensor needed)
 #include <myDHTlib.h>
 
 const int DHT_PIN = 2;
@@ -20,6 +19,7 @@ void setup()
 {
   Serial.begin(115200);
   dht.begin();
+  dht.testMode = true;
   Serial.println("Sanity Check & isConnected Test");
 }
 
