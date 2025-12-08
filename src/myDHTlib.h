@@ -19,8 +19,18 @@ enum DHTError
   DHT_ERROR_TIMEOUT,     // Sensor ACK not received in time
   DHT_ERROR_CHECKSUM,    // Checksum mismatch
   DHT_ERROR_BIT_TIMEOUT, // Timeout while reading a bit
+  DHT_ERROR_SANITY,      // Reading outside plausible physical range
   DHT_ERROR_INTERNAL     // Catch-all for unexpected internal failures
 };
+
+// Temperature and humidity plausible ranges
+constexpr float DHT11_MIN_TEMP = 0.0;
+constexpr float DHT11_MAX_TEMP = 50.0;
+constexpr float DHT22_MIN_TEMP = -40.0;
+constexpr float DHT22_MAX_TEMP = 80.0;
+
+constexpr float MIN_HUMIDITY = 0.0;
+constexpr float MAX_HUMIDITY = 100.0;
 
 // Temperature units
 enum TempUnit
@@ -140,6 +150,11 @@ public:
   bool isConnected() const;                 // Returns true if the sensor responded at least once
   const char *getErrorString(DHTError err); // Converts a DHTError code to a human-readable string
 
+// Injects simulated raw sensor bytes for testing (used only when DHT_TEST_MODE is enabled).
+#ifdef DHT_TEST_MODE
+  void setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5);
+#endif
+
 private:
   uint8_t _pin;             // Pin where sensor is connected
   DHTType _type = DHT_AUTO; // Sensor type
@@ -151,6 +166,8 @@ private:
 
   DHTData _lastValidData;         // Last successfully read sensor data
   bool _hasLastValidData = false; // Flag indicating if _lastValidData contains valid data
+
+  bool sanityCheck(); // Checks if reading is realistic
 
   // Low-level read functions
   int readOneBit(int counter);   // Reads a single bit from the sensor

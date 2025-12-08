@@ -6,6 +6,7 @@
   Version: 1.0
 */
 
+#define DHT_TEST_MODE // Enables test mode for simulating sensor data
 #include "myDHTlib.h"
 #include <math.h>
 
@@ -53,8 +54,21 @@ DHTError MyDHT::read()
         err = readOnce();
         if (err == DHT_OK)
         {
+            // If sanity check fails, report an error but fall back to last valid reading when available
+            if (!sanityCheck())
+            {
+                setError(DHT_ERROR_SANITY);
+
+                if (_hasLastValidData)
+                {
+                    return DHT_OK;
+                }
+
+                return DHT_ERROR_SANITY;
+            }
             setError(DHT_OK);
             _failureCount = 0;
+            _hasLastValidData = true;
             return DHT_OK;
         }
         delay(retryDelay); // Short delay before retry
@@ -108,8 +122,10 @@ DHTError MyDHT::readOnce()
             return DHT_ERROR_TIMEOUT;
         }
     }
+    return read5Bytes(); // Normal mode: read raw data from sensor
 
-    return read5Bytes();
+    // For DHT_TEST_MODE example usage:
+    // return DHT_OK;  // (see instructions in README)
 }
 
 /*
@@ -668,3 +684,46 @@ const char *MyDHT::getErrorString(DHTError err)
         return "Unknown error";
     }
 }
+
+/*
+  Performs validation of the decoded temperature and humidity values.
+  Ensures that all readings fall within the allowed range for the sensor model.
+  @return true if data is valid, false if values are unrealistic or out-of-range.
+*/
+bool MyDHT::sanityCheck()
+{
+    // DHTData object from the current raw bytes
+    DHTData d = makeData(Celsius);
+
+    float temp = d.temp;
+    float hum = d.hum;
+
+    // Apply model-specific temperature bounds
+    float minTemp = (_type == DHT11) ? DHT11_MIN_TEMP : DHT22_MIN_TEMP;
+    float maxTemp = (_type == DHT11) ? DHT11_MAX_TEMP : DHT22_MAX_TEMP;
+
+    // Reject invalid or out-of-range temperatures
+    if (isnan(temp) || temp < minTemp || temp > maxTemp)
+        return false;
+
+    // Reject invalid humidity (must be 0–100%)
+    if (isnan(hum) || hum < 0.0f || hum > 100.0f)
+        return false;
+
+    return true;
+}
+
+/*
+  Injects raw sensor bytes for controlled testing without a physical DHT sensor.
+  Used to verify decoding and sanity-check logic.
+*/
+#ifdef DHT_TEST_MODE
+void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5)
+{
+    _byte1 = b1;
+    _byte2 = b2;
+    _byte3 = b3;
+    _byte4 = b4;
+    _byte5 = b5;
+}
+#endif
