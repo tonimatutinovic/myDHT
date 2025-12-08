@@ -25,6 +25,15 @@ This makes the library suitable for both practical use and educational purposes 
 - Consecutive failure counter
 - Connection-status helper (`isConnected()`)
 
+### Sanity-Check and Fail-Safe Mode
+- Temperature must fall within valid ranges
+  - DHT11: 0–50°C
+  - DHT22: –40 to 80°C
+- Humidity must be between 0–100%
+- Values must not be NaN
+- If a previous valid reading exists, last known good values are returned
+- If no valid reading exists yet, error is returned normally
+
 ### Calibration and Validation
 - Temperature and humidity offset calibration
 - Internal clamping and sanity checking for out-of-range readings
@@ -93,6 +102,90 @@ void loop() {
 }
 ```
 
+## Sanity-Check / Fail-Safe Testing (DHT_TEST_MODE)
+To test the new fail-safe and validation logic without real hardware, enable:
+```cpp
+#define DHT_TEST_MODE
+```
+This allows you to inject synthetic 5-byte sensor data:
+```cpp
+dht.setRawBytes(b1, b2, b3, b4, b5);
+```
+### IMPORTANT: temporarily override readOnce().
+To fully bypass hardware access while testing:
+In myDHTlib.cpp, comment out the call to the real low-level read:
+```cpp
+// return DHT_OK  // <-- uncomment this line for TEST MODE
+```
+SanityCheck.ino example is included in the repository as
+examples/SanityCheck/SanityCheck.ino.
+```cpp
+#define DHT_TEST_MODE
+#include <myDHTlib.h>
+
+const int DHT_PIN = 2;
+
+// Using DHT11 in this demo
+MyDHT dht(DHT_PIN, DHT11);
+
+/*
+  --- USING DHT22 INSTEAD ---
+  1) Replace constructor with:
+       MyDHT dht(DHT_PIN, DHT22);
+  2) Replace valid test bytes with DHT22-format ones.
+     Example (25.0°C, 40.0%):
+       dht.setRawBytes(0x01, 0x90, 0x00, 0xFA, 0x8B);
+*/
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  Serial.println("Sanity Check & isConnected Test");
+}
+
+void loop() {
+  Serial.println("\n--- Valid Read ---");
+  dht.setRawBytes(0x1E, 0x00, 0x32, 0x00, 0x50); // T=30°C, H=50%
+
+  DHTError err = dht.read();
+
+  if (err == DHT_OK) {
+    Serial.print("Temperature: ");
+    Serial.println(dht.getTemperature(Celsius));
+    Serial.print("Humidity: ");
+    Serial.println(dht.getHumidity());
+  }
+
+  delay(2000);
+
+  Serial.println("\n--- Invalid Reads ---");
+
+  for (int i = 1; i <= 6; i++) {
+    dht.setRawBytes(0xFF,0xFF,0xFF,0xFF,0xFF);
+    err = dht.read();
+
+    if (err == DHT_ERROR_SANITY) {
+      Serial.print("Invalid reading ");
+      Serial.println(i);
+    }
+    else if (err == DHT_OK) {
+      Serial.print("Reading ");
+      Serial.print(i);
+      Serial.println(" returned OK but values were rejected by validation");
+    }
+
+    if (!dht.isConnected()) {
+      Serial.println("Sensor appears disconnected after consecutive failures!");
+    }
+
+    delay(1000);
+  }
+
+  Serial.println("\n--- Test complete. Restarting in 10s ---");
+  delay(10000);
+}
+```
+
 ## Error Handling
 The library uses a clear and minimal error system:
 - DHT_OK
@@ -132,7 +225,8 @@ MyDHT/
 │   ├── RawRead
 │   ├── ErrorHandlingRead
 │   ├── AsyncRead
-│   └── AutoDetect
+│   ├── AutoDetect
+│   └── SanityCheck
 ├── src/
 |   ├── myDHTlib.h
 |   └── myDHTlib.cpp
@@ -140,8 +234,6 @@ MyDHT/
 ```
 
 ## Planned Improvements
-Planned upgrades include:
-- Fail-safe / Sanity Validation
 - Debug Mode
 - Memory-Optimized Build
 - Multi-Sensor Support
