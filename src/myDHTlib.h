@@ -144,6 +144,9 @@ public:
   DHTType getType();
   void setType(DHTType type);
 
+  // Getter for sensor pin
+  int getPin() const { return _pin; }
+
   // Minimum wait time between two readings (depends on sensor type)
   uint16_t getMinReadInterval();
 
