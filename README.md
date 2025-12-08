@@ -42,7 +42,7 @@ This makes the library suitable for both practical use and educational purposes 
 ### Raw Data Access
 - Access to all 5 sensor bytes
 - Access to raw high/low pulse durations for all 40 bits  
-  Useful for debugging or research
+- Useful for debugging or research
 
 ### Single-Call Unified API
 - `getData()` returns temperature, humidity, dew point, heat index, and status in one struct
@@ -53,6 +53,16 @@ This makes the library suitable for both practical use and educational purposes 
 - **Note:** Full non-blocking behavior is not possible due to timing restrictions in the DHT protocol.  
   The library performs everything that *can* be asynchronous, but the low-level 40-bit read remains timing-critical and therefore executes in a short blocking window.
 
+### Debug Mode
+- Enables detailed debug messages via Serial
+- Prints formatted internal state and read attempts
+- Controlled via dht.debugMode = true;
+
+### Memory-Optimized Build
+- Reduces RAM usage by disabling Debug Mode and Test Mode
+- Core reading, sanity check, and fail-safe functionality preserved
+- Controlled at compile-time with constexpr bool optimizedBuild in library
+
 ## Installation
 
 Place the library folder into:
@@ -61,6 +71,7 @@ Documents/Arduino/libraries/MyDHT
 ```
 
 ## Basic Example
+Shows simple temperature and humidity readings.
 
 ```cpp
 #include <myDHTlib.h>
@@ -102,90 +113,91 @@ void loop() {
 }
 ```
 
-## Sanity-Check / Fail-Safe Testing (DHT_TEST_MODE)
-To test the new fail-safe and validation logic without real hardware, enable:
+## Sanity-Check / Fail-Safe Demo (DHT_TEST_MODE)
+
+Use `testMode = true` to test fail-safe logic without real hardware.  
+The library validates readings and optionally falls back to the last valid data.
+
 ```cpp
-#define DHT_TEST_MODE
-```
-This allows you to inject synthetic 5-byte sensor data:
-```cpp
-dht.setRawBytes(b1, b2, b3, b4, b5);
-```
-### IMPORTANT: temporarily override readOnce().
-To fully bypass hardware access while testing:
-In myDHTlib.cpp, comment out the call to the real low-level read:
-```cpp
-// return DHT_OK  // <-- uncomment this line for TEST MODE
-```
-SanityCheck.ino example is included in the repository as
-examples/SanityCheck/SanityCheck.ino.
-```cpp
-#define DHT_TEST_MODE
 #include <myDHTlib.h>
 
-const int DHT_PIN = 2;
-
-// Using DHT11 in this demo
-MyDHT dht(DHT_PIN, DHT11);
-
-/*
-  --- USING DHT22 INSTEAD ---
-  1) Replace constructor with:
-       MyDHT dht(DHT_PIN, DHT22);
-  2) Replace valid test bytes with DHT22-format ones.
-     Example (25.0°C, 40.0%):
-       dht.setRawBytes(0x01, 0x90, 0x00, 0xFA, 0x8B);
-*/
+MyDHT dht(2);
+dht.testMode = true;
 
 void setup() {
-  Serial.begin(115200);
-  dht.begin();
-  Serial.println("Sanity Check & isConnected Test");
+    Serial.begin(115200);
+    dht.begin();
+    Serial.println("Sanity-Check Demo");
 }
 
 void loop() {
-  Serial.println("\n--- Valid Read ---");
-  dht.setRawBytes(0x1E, 0x00, 0x32, 0x00, 0x50); // T=30°C, H=50%
+    // --- Valid reading ---
+    dht.setRawBytes(0x1E, 0x00, 0x32, 0x00, 0x50); // T=30°C, H=50%
+    DHTError err = dht.read();
 
-  DHTError err = dht.read();
+    if (err == DHT_OK) {
+        Serial.print("Temp: "); Serial.println(dht.getTemperature(Celsius));
+        Serial.print("Hum: ");  Serial.println(dht.getHumidity());
+    }
 
-  if (err == DHT_OK) {
-    Serial.print("Temperature: ");
-    Serial.println(dht.getTemperature(Celsius));
-    Serial.print("Humidity: ");
-    Serial.println(dht.getHumidity());
-  }
+    delay(1000);
 
-  delay(2000);
-
-  Serial.println("\n--- Invalid Reads ---");
-
-  for (int i = 1; i <= 6; i++) {
+    // --- Invalid reading ---
     dht.setRawBytes(0xFF,0xFF,0xFF,0xFF,0xFF);
     err = dht.read();
 
     if (err == DHT_ERROR_SANITY) {
-      Serial.print("Invalid reading ");
-      Serial.println(i);
-    }
-    else if (err == DHT_OK) {
-      Serial.print("Reading ");
-      Serial.print(i);
-      Serial.println(" returned OK but values were rejected by validation");
+        Serial.println("Invalid reading detected, fallback applied if possible");
     }
 
-    if (!dht.isConnected()) {
-      Serial.println("Sensor appears disconnected after consecutive failures!");
-    }
-
-    delay(1000);
-  }
-
-  Serial.println("\n--- Test complete. Restarting in 10s ---");
-  delay(10000);
+    delay(2000);
 }
 ```
 
+## Debug Mode
+Demonstrates how to enable debug prints for troubleshooting sensor reads.
+```cpp
+#include <myDHTlib.h>
+
+MyDHT dht(2);
+
+void setup() {
+  Serial.begin(115200);
+  dht.debugMode = true;  // Enable debug prints
+  dht.begin();
+}
+
+void loop() {
+  dht.read();
+  delay(2000);
+}
+```
+
+## Memory-Optimized Build
+Shows usage of the lightweight memory build, which skips debug and test logic.
+```cpp
+#include <myDHTlib.h>
+
+MyDHT dht(2);
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+}
+
+void loop() {
+  DHTData data = dht.getData();  // Optimized build reads sensor efficiently
+  if (data.status == DHT_OK) {
+    Serial.print("Temp: "); Serial.println(data.temp);
+    Serial.print("Hum: "); Serial.println(data.hum);
+  }
+  delay(2000);
+}
+```
+---
+All other examples, such as calibrated readings, raw data access, error handling, async reads are available in the examples/ folder.
+
+---
 ## Error Handling
 The library uses a clear and minimal error system:
 - DHT_OK
@@ -234,6 +246,4 @@ MyDHT/
 ```
 
 ## Planned Improvements
-- Debug Mode
-- Memory-Optimized Build
 - Multi-Sensor Support
