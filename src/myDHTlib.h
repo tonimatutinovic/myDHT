@@ -3,6 +3,10 @@
 
 #include <Arduino.h>
 
+#ifdef DHT_DEBUG_MODE
+#include <stdarg.h> // Needed for variadic debugPrint
+#endif
+
 // Sensor type
 enum DHTType
 {
@@ -204,6 +208,11 @@ private:
     else
       _failureCount = 0;
   }
+
+//  Prints formatted debug messages to Serial with a "[DHT DEBUG]" prefix
+#ifdef DHT_DEBUG_MODE
+  void debugPrint(const char *fmt, ...); // Variadic debug print
+#endif
 };
 
 #endif

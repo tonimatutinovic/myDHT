@@ -6,7 +6,8 @@
   Version: 1.0
 */
 
-#define DHT_TEST_MODE // Enables test mode for simulating sensor data
+#define DHT_TEST_MODE  // Enables test mode for simulating sensor data
+#define DHT_DEBUG_MODE // Enables debug logging
 #include "myDHTlib.h"
 #include <math.h>
 
@@ -21,6 +22,41 @@ MyDHT::MyDHT(uint8_t pin, DHTType type, uint8_t retries)
     _pin = pin;
     _type = type;
     _retries = retries;
+
+    switch (_type)
+    {
+    case DHT11:
+        _timings.startLowMs = 18;      // Pull LOW duration in ms
+        _timings.ackTimeoutUs = 5000;  // ACK timeout in µs
+        _timings.ackDoneUs = 80;       // ACK done threshold
+        _timings.bitTimeoutUs = 120;   // Bit read timeout
+        _timings.highThresholdUs = 50; // HIGH pulse threshold to distinguish 0/1
+        break;
+
+    case DHT22:
+        _timings.startLowMs = 1;      // Pull LOW duration in ms
+        _timings.ackTimeoutUs = 1000; // ACK timeout in µs
+        _timings.ackDoneUs = 80;
+        _timings.bitTimeoutUs = 80;
+        _timings.highThresholdUs = 40;
+        break;
+
+    case DHT_AUTO:
+    default:
+        // Default safe timings for autodetect
+        _timings.startLowMs = 18;
+        _timings.ackTimeoutUs = 5000;
+        _timings.ackDoneUs = 80;
+        _timings.bitTimeoutUs = 120;
+        _timings.highThresholdUs = 50;
+        break;
+    }
+
+    // Initialising state last data
+    _state = IDLE;
+    _hasLastValidData = false;
+    _lastError = DHT_OK;
+    _failureCount = 0;
 }
 
 // Initialize the sensor (set pin mode)
@@ -51,6 +87,10 @@ DHTError MyDHT::read()
 
     for (uint8_t attempt = 0; attempt < _retries; attempt++)
     {
+#ifdef DHT_DEBUG_MODE
+        debugPrint("Read attempt %d/%d", attempt + 1, _retries);
+#endif
+
         err = readOnce();
         if (err == DHT_OK)
         {
@@ -71,6 +111,9 @@ DHTError MyDHT::read()
             _hasLastValidData = true;
             return DHT_OK;
         }
+#ifdef DHT_DEBUG_MODE
+        debugPrint("Read result: %s", getErrorString(err));
+#endif
         delay(retryDelay); // Short delay before retry
     }
 
@@ -84,6 +127,10 @@ DHTError MyDHT::read()
 */
 DHTError MyDHT::readOnce()
 {
+#ifdef DHT_DEBUG_MODE
+    debugPrint("Starting single read attempt on pin %d", _pin);
+#endif
+
     // Send start signal
     pinMode(_pin, OUTPUT);
     digitalWrite(_pin, LOW);
@@ -122,7 +169,14 @@ DHTError MyDHT::readOnce()
             return DHT_ERROR_TIMEOUT;
         }
     }
-    return read5Bytes(); // Normal mode: read raw data from sensor
+
+    DHTError err = read5Bytes(); // Normal mode: read raw data from sensor
+
+#ifdef DHT_DEBUG_MODE
+    debugPrint("readOnce result: %s", getErrorString(err));
+#endif
+
+    return err;
 
     // For DHT_TEST_MODE example usage:
     // return DHT_OK;  // (see instructions in README)
@@ -175,16 +229,26 @@ DHTError MyDHT::read5Bytes()
         return DHT_ERROR_BIT_TIMEOUT;
     }
 
+#ifdef DHT_DEBUG_MODE
+    debugPrint("Raw bytes: %X %X %X %X %X", _byte1, _byte2, _byte3, _byte4, _byte5);
+#endif
+
     // Verify checksum
     uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
     if (sum != _byte5)
     {
         setError(DHT_ERROR_CHECKSUM);
+#ifdef DHT_DEBUG_MODE
+        debugPrint("Checksum mismatch: %X != %X", sum, _byte5);
+#endif
         return DHT_ERROR_CHECKSUM;
     }
 
     setError(DHT_OK);
     _failureCount = 0;
+#ifdef DHT_DEBUG_MODE
+    debugPrint("read5Bytes: OK, checksum verified");
+#endif
     return DHT_OK;
 }
 
@@ -695,6 +759,10 @@ bool MyDHT::sanityCheck()
     // DHTData object from the current raw bytes
     DHTData d = makeData(Celsius);
 
+#ifdef DHT_DEBUG_MODE
+    debugPrint("Sanity check: Temp=%f, Hum=%f", d.temp, d.hum);
+#endif
+
     float temp = d.temp;
     float hum = d.hum;
 
@@ -704,11 +772,21 @@ bool MyDHT::sanityCheck()
 
     // Reject invalid or out-of-range temperatures
     if (isnan(temp) || temp < minTemp || temp > maxTemp)
+    {
+#ifdef DHT_DEBUG_MODE
+        debugPrint("Sanity check failed: Temperature=%f out of range", d.temp);
+#endif
         return false;
+    }
 
     // Reject invalid humidity (must be 0–100%)
     if (isnan(hum) || hum < 0.0f || hum > 100.0f)
+    {
+#ifdef DHT_DEBUG_MODE
+        debugPrint("Sanity check failed: Humidity=%f out of range", d.hum);
+#endif
         return false;
+    }
 
     return true;
 }
@@ -725,5 +803,79 @@ void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t 
     _byte3 = b3;
     _byte4 = b4;
     _byte5 = b5;
+}
+#endif
+
+/*
+  Prints formatted debug messages to Serial with a "[DHT DEBUG]" prefix.
+  Used for internal library debugging.
+*/
+#ifdef DHT_DEBUG_MODE
+/*
+  Supports:
+    - %f for floats
+    - %d for integers
+    - %s for C-strings
+    - %X for hexadecimal integers
+*/
+void MyDHT::debugPrint(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    char buf[256];    // Main buffer
+    char tempBuf[32]; // Temp buffer for float or string conversion
+
+    const char *traverse = fmt;
+    char *bufPtr = buf;
+    int remaining = sizeof(buf);
+
+    while (*traverse && remaining > 0)
+    {
+        if (*traverse == '%' && *(traverse + 1) == 'f') // float
+        {
+            double f = va_arg(args, double);
+            dtostrf(f, 5, 1, tempBuf); // width=5, 1 decimal place
+            int n = snprintf(bufPtr, remaining, "%s", tempBuf);
+            bufPtr += n;
+            remaining -= n;
+            traverse += 2;
+        }
+        else if (*traverse == '%' && *(traverse + 1) == 'd') // integer
+        {
+            int i = va_arg(args, int);
+            int n = snprintf(bufPtr, remaining, "%d", i);
+            bufPtr += n;
+            remaining -= n;
+            traverse += 2;
+        }
+        else if (*traverse == '%' && *(traverse + 1) == 's') // string
+        {
+            const char *s = va_arg(args, const char *);
+            int n = snprintf(bufPtr, remaining, "%s", s);
+            bufPtr += n;
+            remaining -= n;
+            traverse += 2;
+        }
+        else if (*traverse == '%' && *(traverse + 1) == 'X') // hex
+        {
+            int x = va_arg(args, int);
+            int n = snprintf(bufPtr, remaining, "%02X", x); // always 2 digits
+            bufPtr += n;
+            remaining -= n;
+            traverse += 2;
+        }
+        else // ordinary character
+        {
+            *bufPtr++ = *traverse++;
+            remaining--;
+        }
+    }
+
+    *bufPtr = '\0';
+    va_end(args);
+
+    Serial.print("[DHT DEBUG] ");
+    Serial.println(buf);
 }
 #endif
