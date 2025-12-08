@@ -238,10 +238,13 @@ MyDHT/
 │   ├── ErrorHandlingRead
 │   ├── AsyncRead
 │   ├── AutoDetect
-│   └── SanityCheck
+│   ├── SanityCheck
+│   ├── DebugMode
+│   └── MemoryOptimizedBuild
 ├── src/
-|   ├── myDHTlib.h
-|   └── myDHTlib.cpp
+|   ├── myDHT_config.h
+|   ├── myDHTlib.cpp
+|   └── myDHTlib.h
 └── README.md
 ```
 
