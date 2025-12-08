@@ -1,6 +1,7 @@
 #ifndef MYDHTLIB_H
 #define MYDHTLIB_H
 
+#include "myDHT_config.h"
 #include <Arduino.h>
 #include <stdarg.h> // Needed for variadic debugPrint
 
@@ -151,6 +152,7 @@ public:
   bool isConnected() const;                 // Returns true if the sensor responded at least once
   const char *getErrorString(DHTError err); // Converts a DHTError code to a human-readable string
 
+  static constexpr bool optimizedBuild = DHT_OPTIMIZED_BUILD;
   bool testMode = false;  // If true, enables setRawBytes()
   bool debugMode = false; // If true, enables debugPrint()
 

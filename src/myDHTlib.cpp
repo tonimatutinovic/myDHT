@@ -80,57 +80,74 @@ void MyDHT::begin()
 */
 DHTError MyDHT::read()
 {
-    // test mode
-    if (testMode)
+    // Compile-time decision: optimized build
+    if constexpr (optimizedBuild)
     {
-        if (!sanityCheck()) // check simulated bytes
+        // Memory-light verzija: preskačemo debug i testMode
+        DHTError err = readOnce();
+        if (!sanityCheck())
         {
             setError(DHT_ERROR_SANITY);
             return DHT_ERROR_SANITY;
         }
-        _hasLastValidData = true;
         setError(DHT_OK);
+        _hasLastValidData = true;
         return DHT_OK;
     }
-
-    DHTError err;
-    uint16_t retryDelay = (_type == DHT11) ? 50 : 20;
-
-    for (uint8_t attempt = 0; attempt < _retries; attempt++)
+    else
     {
-
-        if (debugMode)
-            debugPrint("Read attempt %d/%d", attempt + 1, _retries);
-
-        err = readOnce();
-        if (err == DHT_OK)
+        // test mode
+        if (testMode)
         {
-            // If sanity check fails, report an error but fall back to last valid reading when available
-            if (!sanityCheck())
+            if (!sanityCheck()) // check simulated bytes
             {
                 setError(DHT_ERROR_SANITY);
-
-                if (_hasLastValidData)
-                {
-                    return DHT_OK;
-                }
-
                 return DHT_ERROR_SANITY;
             }
-            setError(DHT_OK);
-            _failureCount = 0;
             _hasLastValidData = true;
+            setError(DHT_OK);
             return DHT_OK;
         }
 
-        if (debugMode)
-            debugPrint("Read result: %s", getErrorString(err));
+        DHTError err;
+        uint16_t retryDelay = (_type == DHT11) ? 50 : 20;
 
-        delay(retryDelay); // Short delay before retry
+        for (uint8_t attempt = 0; attempt < _retries; attempt++)
+        {
+
+            if (debugMode)
+                debugPrint("Read attempt %d/%d", attempt + 1, _retries);
+
+            err = readOnce();
+            if (err == DHT_OK)
+            {
+                // If sanity check fails, report an error but fall back to last valid reading when available
+                if (!sanityCheck())
+                {
+                    setError(DHT_ERROR_SANITY);
+
+                    if (_hasLastValidData)
+                    {
+                        return DHT_OK;
+                    }
+
+                    return DHT_ERROR_SANITY;
+                }
+                setError(DHT_OK);
+                _failureCount = 0;
+                _hasLastValidData = true;
+                return DHT_OK;
+            }
+
+            if (debugMode)
+                debugPrint("Read result: %s", getErrorString(err));
+
+            delay(retryDelay); // Short delay before retry
+        }
+
+        setError(err);
+        return err;
     }
-
-    setError(err);
-    return err;
 }
 
 /*
@@ -139,8 +156,11 @@ DHTError MyDHT::read()
 */
 DHTError MyDHT::readOnce()
 {
-    if (debugMode)
-        debugPrint("Starting single read attempt on pin %d", _pin);
+    if constexpr (!optimizedBuild)
+    {
+        if (debugMode)
+            debugPrint("Starting single read attempt on pin %d", _pin);
+    }
 
     // Send start signal
     pinMode(_pin, OUTPUT);
@@ -183,8 +203,11 @@ DHTError MyDHT::readOnce()
 
     DHTError err = read5Bytes(); // Normal mode: read raw data from sensor
 
-    if (debugMode)
-        debugPrint("readOnce result: %s", getErrorString(err));
+    if constexpr (!optimizedBuild)
+    {
+        if (debugMode)
+            debugPrint("readOnce result: %s", getErrorString(err));
+    }
 
     return err;
 
@@ -239,23 +262,31 @@ DHTError MyDHT::read5Bytes()
         return DHT_ERROR_BIT_TIMEOUT;
     }
 
-    if (debugMode)
-        debugPrint("Raw bytes: %X %X %X %X %X", _byte1, _byte2, _byte3, _byte4, _byte5);
-
+    if constexpr (!optimizedBuild)
+    {
+        if (debugMode)
+            debugPrint("Raw bytes: %X %X %X %X %X", _byte1, _byte2, _byte3, _byte4, _byte5);
+    }
     // Verify checksum
     uint8_t sum = _byte1 + _byte2 + _byte3 + _byte4;
     if (sum != _byte5)
     {
         setError(DHT_ERROR_CHECKSUM);
-        if (debugMode)
-            debugPrint("Checksum mismatch: %X != %X", sum, _byte5);
+        if constexpr (!optimizedBuild)
+        {
+            if (debugMode)
+                debugPrint("Checksum mismatch: %X != %X", sum, _byte5);
+        }
         return DHT_ERROR_CHECKSUM;
     }
 
     setError(DHT_OK);
     _failureCount = 0;
-    if (debugMode)
-        debugPrint("read5Bytes: OK, checksum verified");
+    if constexpr (!optimizedBuild)
+    {
+        if (debugMode)
+            debugPrint("read5Bytes: OK, checksum verified");
+    }
     return DHT_OK;
 }
 
@@ -391,36 +422,56 @@ float MyDHT::getHeatIndex(TempUnit unit)
 
 DHTData MyDHT::getData(TempUnit unit)
 {
-    DHTData data;
-
-    DHTError err = read();
-    data.status = err;
-
-    if (err != DHT_OK)
+    if constexpr (optimizedBuild)
     {
-        if (_hasLastValidData)
+        DHTData data;
+        data.status = read(); // just read and makeData
+        if (data.status != DHT_OK)
         {
-            data = _lastValidData;
-            data.status = err;
+            data.temp = NAN;
+            data.hum = NAN;
+            data.dew = NAN;
+            data.hi = NAN;
+        }
+        else
+        {
+            data = makeData(unit);
+        }
+        return data;
+    }
+    else
+    {
+        DHTData data;
+
+        DHTError err = read();
+        data.status = err;
+
+        if (err != DHT_OK)
+        {
+            if (_hasLastValidData)
+            {
+                data = _lastValidData;
+                data.status = err;
+                return data;
+            }
+
+            data.temp = NAN;
+            data.hum = NAN;
+            data.dew = NAN;
+            data.hi = NAN;
             return data;
         }
 
-        data.temp = NAN;
-        data.hum = NAN;
-        data.dew = NAN;
-        data.hi = NAN;
+        data.temp = getTemperature(unit);
+        data.hum = getHumidity();
+        data.dew = getDewPoint(unit);
+        data.hi = getHeatIndex(unit);
+
+        _lastValidData = data;
+        _hasLastValidData = true;
+
         return data;
     }
-
-    data.temp = getTemperature(unit);
-    data.hum = getHumidity();
-    data.dew = getDewPoint(unit);
-    data.hi = getHeatIndex(unit);
-
-    _lastValidData = data;
-    _hasLastValidData = true;
-
-    return data;
 }
 
 /*
@@ -561,6 +612,20 @@ void MyDHT::startAsyncRead(DHTCallback cb)
 */
 void MyDHT::processAsync()
 {
+    if constexpr (optimizedBuild)
+    {
+        // Memory-light build: read5Bytes and return
+        if (_state == READ_BITS_BLOCKING)
+        {
+            read5Bytes();
+            _state = IDLE;
+        }
+        else if (_state != IDLE)
+        {
+            _state = IDLE;
+        }
+        return;
+    }
     switch (_state)
     {
     case START_SIGNAL:
@@ -740,8 +805,11 @@ bool MyDHT::sanityCheck()
     // DHTData object from the current raw bytes
     DHTData d = makeData(Celsius);
 
-    if (debugMode)
-        debugPrint("Sanity check: Temp=%f, Hum=%f", d.temp, d.hum);
+    if constexpr (!optimizedBuild)
+    {
+        if (debugMode)
+            debugPrint("Sanity check: Temp=%f, Hum=%f", d.temp, d.hum);
+    }
 
     float temp = d.temp;
     float hum = d.hum;
@@ -753,16 +821,22 @@ bool MyDHT::sanityCheck()
     // Reject invalid or out-of-range temperatures
     if (isnan(temp) || temp < minTemp || temp > maxTemp)
     {
-        if (debugMode)
-            debugPrint("Sanity check failed: Temperature=%f out of range", d.temp);
+        if constexpr (!optimizedBuild)
+        {
+            if (debugMode)
+                debugPrint("Sanity check failed: Temperature=%f out of range", d.temp);
+        }
         return false;
     }
 
     // Reject invalid humidity (must be 0–100%)
     if (isnan(hum) || hum < 0.0f || hum > 100.0f)
     {
-        if (debugMode)
-            debugPrint("Sanity check failed: Humidity=%f out of range", d.hum);
+        if constexpr (!optimizedBuild)
+        {
+            if (debugMode)
+                debugPrint("Sanity check failed: Humidity=%f out of range", d.hum);
+        }
         return false;
     }
 
@@ -775,14 +849,22 @@ bool MyDHT::sanityCheck()
 */
 void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5)
 {
-    if (!testMode)
+    if constexpr (optimizedBuild)
+    {
+        // Test mode disabled
         return;
+    }
+    else
+    {
+        if (!testMode)
+            return;
 
-    _byte1 = b1;
-    _byte2 = b2;
-    _byte3 = b3;
-    _byte4 = b4;
-    _byte5 = b5;
+        _byte1 = b1;
+        _byte2 = b2;
+        _byte3 = b3;
+        _byte4 = b4;
+        _byte5 = b5;
+    }
 }
 
 /*
@@ -797,64 +879,72 @@ void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t 
 */
 void MyDHT::debugPrint(const char *fmt, ...)
 {
-    if (!debugMode)
-        return;
-
-    va_list args;
-    va_start(args, fmt);
-
-    char buf[256];    // Main buffer
-    char tempBuf[32]; // Temp buffer for float or string conversion
-
-    const char *traverse = fmt;
-    char *bufPtr = buf;
-    int remaining = sizeof(buf);
-
-    while (*traverse && remaining > 0)
+    if constexpr (optimizedBuild)
     {
-        if (*traverse == '%' && *(traverse + 1) == 'f') // float
-        {
-            double f = va_arg(args, double);
-            dtostrf(f, 5, 1, tempBuf); // width=5, 1 decimal place
-            int n = snprintf(bufPtr, remaining, "%s", tempBuf);
-            bufPtr += n;
-            remaining -= n;
-            traverse += 2;
-        }
-        else if (*traverse == '%' && *(traverse + 1) == 'd') // integer
-        {
-            int i = va_arg(args, int);
-            int n = snprintf(bufPtr, remaining, "%d", i);
-            bufPtr += n;
-            remaining -= n;
-            traverse += 2;
-        }
-        else if (*traverse == '%' && *(traverse + 1) == 's') // string
-        {
-            const char *s = va_arg(args, const char *);
-            int n = snprintf(bufPtr, remaining, "%s", s);
-            bufPtr += n;
-            remaining -= n;
-            traverse += 2;
-        }
-        else if (*traverse == '%' && *(traverse + 1) == 'X') // hex
-        {
-            int x = va_arg(args, int);
-            int n = snprintf(bufPtr, remaining, "%02X", x); // always 2 digits
-            bufPtr += n;
-            remaining -= n;
-            traverse += 2;
-        }
-        else // ordinary character
-        {
-            *bufPtr++ = *traverse++;
-            remaining--;
-        }
+        // In optimized build debug mode is disabled
+        return;
     }
+    else
+    {
+        if (!debugMode)
+            return;
 
-    *bufPtr = '\0';
-    va_end(args);
+        va_list args;
+        va_start(args, fmt);
 
-    Serial.print("[DHT DEBUG] ");
-    Serial.println(buf);
+        char buf[256];    // Main buffer
+        char tempBuf[32]; // Temp buffer for float or string conversion
+
+        const char *traverse = fmt;
+        char *bufPtr = buf;
+        int remaining = sizeof(buf);
+
+        while (*traverse && remaining > 0)
+        {
+            if (*traverse == '%' && *(traverse + 1) == 'f') // float
+            {
+                double f = va_arg(args, double);
+                dtostrf(f, 5, 1, tempBuf); // width=5, 1 decimal place
+                int n = snprintf(bufPtr, remaining, "%s", tempBuf);
+                bufPtr += n;
+                remaining -= n;
+                traverse += 2;
+            }
+            else if (*traverse == '%' && *(traverse + 1) == 'd') // integer
+            {
+                int i = va_arg(args, int);
+                int n = snprintf(bufPtr, remaining, "%d", i);
+                bufPtr += n;
+                remaining -= n;
+                traverse += 2;
+            }
+            else if (*traverse == '%' && *(traverse + 1) == 's') // string
+            {
+                const char *s = va_arg(args, const char *);
+                int n = snprintf(bufPtr, remaining, "%s", s);
+                bufPtr += n;
+                remaining -= n;
+                traverse += 2;
+            }
+            else if (*traverse == '%' && *(traverse + 1) == 'X') // hex
+            {
+                int x = va_arg(args, int);
+                int n = snprintf(bufPtr, remaining, "%02X", x); // always 2 digits
+                bufPtr += n;
+                remaining -= n;
+                traverse += 2;
+            }
+            else // ordinary character
+            {
+                *bufPtr++ = *traverse++;
+                remaining--;
+            }
+        }
+
+        *bufPtr = '\0';
+        va_end(args);
+
+        Serial.print("[DHT DEBUG] ");
+        Serial.println(buf);
+    }
 }
