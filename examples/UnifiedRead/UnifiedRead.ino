@@ -1,4 +1,4 @@
-#include <myDHTlib.h>
+#include <myDHT.h>
 
 #define DHT_PIN 2
 

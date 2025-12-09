@@ -1,7 +1,7 @@
 #ifndef MULTIDHTMANAGER_H
 #define MULTIDHTMANAGER_H
 
-#include "myDHTlib.h"
+#include "myDHT.h"
 
 #define MAX_SENSORS 8
 

@@ -1,0 +1,51 @@
+#######################################
+# Classes (KEYWORD1)
+#######################################
+MyDHT               KEYWORD1
+MultiDHTManager     KEYWORD1
+DHTData             KEYWORD1
+DHTRawData          KEYWORD1
+
+#######################################
+# Methods (KEYWORD2)
+#######################################
+begin               KEYWORD2
+read                KEYWORD2
+readOnce            KEYWORD2
+getTemperature      KEYWORD2
+getHumidity         KEYWORD2
+getHeatIndex        KEYWORD2
+getDewPoint         KEYWORD2
+getData             KEYWORD2
+getRawData          KEYWORD2
+getPin              KEYWORD2
+setRawBytes         KEYWORD2
+
+setTempOffset       KEYWORD2
+setHumOffset        KEYWORD2
+
+getLastError        KEYWORD2
+getFailureCount     KEYWORD2
+isConnected         KEYWORD2
+getErrorString      KEYWORD2
+
+startAsync          KEYWORD2
+processAsync        KEYWORD2
+
+addSensor           KEYWORD2
+readAll             KEYWORD2
+
+#######################################
+# Constants, enums (LITERAL1)
+#######################################
+DHT11               LITERAL1
+DHT22               LITERAL1
+DHT_AUTO            LITERAL1
+
+DHT_OK                      LITERAL1
+DHT_ERROR_NO_RESPONSE       LITERAL1
+DHT_ERROR_TIMEOUT           LITERAL1
+DHT_ERROR_CHECKSUM          LITERAL1
+DHT_ERROR_BIT_TIMEOUT       LITERAL1
+DHT_ERROR_INTERNAL          LITERAL1
+DHT_ERROR_SANITY            LITERAL1

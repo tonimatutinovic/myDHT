@@ -1,23 +1,26 @@
-#include <myDHTlib.h>
+#include <myDHT.h>
 
-const int DHT_PIN = 2;          // Pin where DHT sensor is connected
-MyDHT dht(DHT_PIN, DHT11);      // Create sensor object (DHT11 or DHT22)
+const int DHT_PIN = 2;     // Pin where DHT sensor is connected
+MyDHT dht(DHT_PIN, DHT11); // Create sensor object (DHT11 or DHT22)
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
-    dht.begin();                 // Initialize sensor
+    dht.begin(); // Initialize sensor
     dht.debugMode = true;
 
     Serial.println("=== MyDHT Library DEBUG_MODE Example ===");
 }
 
-void loop() {
+void loop()
+{
     Serial.println("\n--- Performing Read ---");
 
     // Perform a sensor read
     DHTError err = dht.read();
 
-    if (err == DHT_OK) {
+    if (err == DHT_OK)
+    {
         // Print temperature, humidity, dew point, heat index
         Serial.print("Temperature: ");
         Serial.println(dht.getTemperature(Celsius), 2);
@@ -31,18 +34,21 @@ void loop() {
         // Optional: get raw data for debugging
         DHTRawData raw = dht.getRawData();
         Serial.print("Raw bytes: ");
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 5; i++)
+        {
             Serial.print(raw.bytes[i], HEX);
             Serial.print(" ");
         }
         Serial.println();
     }
-    else {
+    else
+    {
         // Print error
         Serial.print("Error: ");
         Serial.println(dht.getErrorString(err));
 
-        if (!dht.isConnected()) {
+        if (!dht.isConnected())
+        {
             Serial.println("Sensor appears disconnected after multiple failures!");
         }
     }

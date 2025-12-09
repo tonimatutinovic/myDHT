@@ -3,7 +3,7 @@
   Shows how optimized build works without debug/test modes
 */
 
-#include <myDHTlib.h>
+#include <myDHT.h>
 
 // CONFIG: set DHT_OPTIMIZED_BUILD true/false in myDHT_config.h
 

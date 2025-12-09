@@ -1,4 +1,4 @@
-#include <myDHTlib.h>
+#include <myDHT.h>
 
 // Pin where the sensor is connected
 const uint8_t DHT_PIN = 2;

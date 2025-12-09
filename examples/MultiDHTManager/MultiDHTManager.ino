@@ -1,4 +1,4 @@
-#include <myDHTlib.h>
+#include <myDHT.h>
 #include <MultiDHTManager.h>
 
 // Create sensors

@@ -1,4 +1,4 @@
-#include <myDHTlib.h>
+#include <myDHT.h>
 
 const int DHT_PIN = 2;
 

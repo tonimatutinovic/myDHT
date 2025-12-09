@@ -6,7 +6,7 @@
   Version: 1.0
 */
 
-#include "myDHTlib.h"
+#include "myDHT.h"
 #include <math.h>
 
 /*

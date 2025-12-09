@@ -1,5 +1,5 @@
-#ifndef MYDHTLIB_H
-#define MYDHTLIB_H
+#ifndef MYDHT_H
+#define MYDHT_H
 
 #include "myDHT_config.h"
 #include <Arduino.h>
