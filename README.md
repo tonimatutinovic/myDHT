@@ -1,6 +1,33 @@
-**Version:** 1.0.0  
-**License:** MIT  
-**Supports:** DHT11, DHT22
+<p align="center">
+
+  <!-- Release badge -->
+  <a href="https://github.com/tonimatutinovic/myDHT/releases">
+    <img src="https://img.shields.io/github/v/release/tonimatutinovic/myDHT?color=blue&label=Release">
+  </a>
+
+  <!-- Stars badge -->
+  <a href="https://github.com/tonimatutinovic/myDHT/stargazers">
+    <img src="https://img.shields.io/github/stars/tonimatutinovic/myDHT?style=social">
+  </a>
+
+  <!-- Arduino Library Manager -->
+  <a href="https://www.ardu-badge.com/myDHT">
+    <img src="https://www.ardu-badge.com/badge/myDHT.svg">
+  </a>
+
+  <!-- License -->
+  <a href="https://github.com/tonimatutinovic/myDHT/blob/main/LICENSE.txt">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg">
+  </a>
+
+  <!-- C++ language -->
+  <img src="https://img.shields.io/badge/language-C++-brightgreen">
+
+  <!-- Repo size -->
+  <img src="https://img.shields.io/github/repo-size/tonimatutinovic/myDHT">
+
+</p>
+
 
 # myDHT – Advanced Arduino Library for DHT11 and DHT22 Sensors
 
