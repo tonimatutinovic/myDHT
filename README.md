@@ -100,6 +100,76 @@ This makes the library suitable for both practical use and educational purposes 
 - Individual result tracking: pin, temperature, humidity, and error codes.
 - Fully compatible with all myDHT features (debug mode, test mode, optimized build, async read, etc.).
 
+# 🏆 Why myDHT Is Better Than Every Standard DHT Library
+
+**myDHT** is built from the ground up to solve the problems that all existing DHT libraries still struggle with.  
+It is faster, safer, more accurate, and dramatically more flexible.
+
+### **1. Partially Non-Blocking Reads (Async State Machine)**
+Most DHT libraries freeze the CPU for up to **2 seconds** per reading.  
+**myDHT uses a partially non-blocking state machine**, keeping the loop responsive while the sensor is being read.  
+> Note: The low-level 40-bit read must remain blocking to guarantee accurate timing, but everything else is asynchronous.
+
+Perfect for real projects with:
+- LEDs  
+- motors  
+- displays  
+- WiFi/Bluetooth communication  
+
+### **2. Multi-Sensor Support**
+Standard libraries are limited to **one global sensor instance**.  
+**MyDHT allows unlimited DHT sensors** via `MultiDHTManager` — ideal for weather stations or multi-room monitoring.
+
+### **3. Auto-Detect (DHT11 / DHT22)**
+Standard libraries require manual configuration and break if the wrong type is selected.  
+**MyDHT identifies the sensor type automatically**, no user configuration required.
+
+### **4. Built-In Sanity-Check & Fail-Safe Logic**
+Many DHT libraries return corrupted or unrealistic values.  
+**MyDHT uses multi-layer sanity filters** that reject:
+- glitch pulses  
+- invalid timing windows  
+- corrupted humidity/temperature combinations  
+
+This results in dramatically **cleaner and more stable readings**.
+
+### **5. Raw Pulse Debug Mode**
+Transparent view into the DHT protocol:
+- pulse timings  
+- raw bitstream  
+- real error causes  
+
+Great for debugging wiring issues and advanced users.
+
+### **6. Memory-Optimized Build Mode**
+Runs even on memory-starved microcontrollers by disabling optional features.  
+Perfect for ATmega8, ATtiny, and older boards.
+
+### **7. Zero Dependencies / Zero Overhead**
+Many libraries pull in unnecessary Arduino utilities or large helper classes.  
+**MyDHT is 100% standalone**, minimal, and lean — no external includes.
+
+### **8. Fastest and Most Consistent DHT Reading Engine**
+MyDHT follows the DHT protocol bit-perfectly with optimized timing windows.  
+This ensures:
+- fewer checksum failures  
+- fewer retries  
+- more accurate values  
+
+---
+
+## Feature Comparison
+
+| Feature | MyDHT | Standard DHT lib | Adafruit DHT |  
+|--------|-------|-----------------|---------------|  
+| Partially Async Support | ✅ | ❌ | ❌ |  
+| Multi-sensor | ✅ | ❌ | ❌ |  
+| Auto-detect | ✅ | ❌ | ❌ |  
+| Raw debug | ✅ | ❌ | ❌ |  
+| Sanity-check | ✅ | ⚠️ partial | ⚠️ partial |  
+| Memory-optimized | ✅ | ❌ | ❌ |  
+
+
 ## Installation
 
 Place the library folder into:
