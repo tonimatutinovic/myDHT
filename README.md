@@ -1,8 +1,26 @@
-**Version:** 2.0.0  
-**License:** MIT  
-**Supports:** DHT11, DHT22
-**Beginner Layer:** myDHT
-**Advanced Layer:** myDHTPro
+<p align="center">
+  <a href="https://github.com/tonimatutinovic/myDHT/releases">
+    <img src="https://img.shields.io/github/v/release/tonimatutinovic/myDHT?color=blue&label=Release">
+  </a>
+  <a href="https://github.com/tonimatutinovic/myDHT/stargazers">
+    <img src="https://img.shields.io/github/stars/tonimatutinovic/myDHT?style=social">
+  </a>
+  <a href="https://www.ardu-badge.com/myDHT">
+    <img src="https://www.ardu-badge.com/badge/myDHT.svg">
+  </a>
+  <a href="https://github.com/tonimatutinovic/myDHT/blob/main/LICENSE.txt">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg">
+  </a>
+  <img src="https://img.shields.io/badge/platform-Arduino-blue">
+  <img src="https://img.shields.io/badge/language-C++-brightgreen">
+</p>
+
+<p align="center">
+  <strong>Supports:</strong> DHT11, DHT22<br>
+  <strong>Beginner Layer:</strong> <code>myDHT</code><br>
+  <strong>Advanced Layer:</strong> <code>myDHTPro</code>
+</p>
+
 
 # myDHT – Advanced Arduino Library for DHT11 and DHT22 Sensors
 
@@ -77,6 +95,17 @@ It provides Beginner (myDHT) and Advanced (myDHTPro) layers for different user l
 - Centralized batch reading with a single call (readAll())
 - Individual result tracking: pin, temperature, humidity, and error codes.
 - Fully compatible with all myDHT features (debug mode, test mode, optimized build, async read, etc.).
+
+## Tested Hardware
+
+The myDHT library has been **officially tested** on:
+
+- **Board:** Arduino Uno  
+- **Sensors:** DHT11, DHT22
+
+Other boards and sensors that are plug-in compatible (e.g., ATmega328P-based boards or DHT22-compatible sensors) are expected to work but are **not officially tested**.
+
+---
 
 # 🏆 Why myDHT Is Better Than Every Standard DHT Library
 
