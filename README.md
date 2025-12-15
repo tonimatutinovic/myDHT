@@ -1,13 +1,18 @@
-**Version:** 1.0.0  
+**Version:** 2.0.0  
 **License:** MIT  
 **Supports:** DHT11, DHT22
+**Beginner Layer:** myDHT
+**Advanced Layer:** myDHTPro
 
 # myDHT – Advanced Arduino Library for DHT11 and DHT22 Sensors
 
-myDHT is a self-contained, fully implemented Arduino driver for DHT11 and DHT22 temperature and humidity sensors.  
+myDHT is a fully implemented Arduino library for DHT11 and DHT22 temperature and humidity sensors.
+
 It does not rely on any third-party DHT libraries; instead, it manually implements the complete protocol, including start-signal generation, acknowledgment handling, and high-resolution bit-timing measurement.
 
-This makes the library suitable for both practical use and educational purposes where full control and transparency are desired.
+It provides Beginner (myDHT) and Advanced (myDHTPro) layers for different user levels:
+- Beginner layer: simple, easy-to-use API, familiar like Adafruit DHT.
+- Advanced layer: full protocol control, async support, raw access, debug, optimized memory build.
 
 ## Features
 
@@ -80,7 +85,32 @@ Place the library folder into:
 Documents/Arduino/libraries/myDHT
 ```
 
-## Basic Example
+## Beginner Example: Full Features
+- Easy to use for beginners
+- Friendly error messages if `enableFriendlyErrors(true)` is set
+
+```cpp
+#include <myDHT.h>   // Beginner layer
+
+const int DHT_PIN = 2;
+myDHT dht(DHT_PIN); // auto-detect sensor type
+
+void setup() {
+    Serial.begin(115200);
+    dht.begin();
+}
+
+void loop() {
+    Serial.print("Temp: "); Serial.println(dht.getTemperature(Celsius));
+    Serial.print("Hum: ");  Serial.println(dht.getHumidity());
+    Serial.print("Dew: ");  Serial.println(dht.dewPoint(Celsius));
+    Serial.print("HI: ");   Serial.println(dht.HiIndex(Celsius));
+    delay(dht.getMinInterval());
+}
+
+```
+
+## Advanced Examples: Basic Example
 Shows simple temperature and humidity readings.
 
 ```cpp
@@ -123,7 +153,7 @@ void loop() {
 }
 ```
 
-## Sanity-Check / Fail-Safe Demo (DHT_TEST_MODE)
+## Advanced Examples: Sanity-Check / Fail-Safe Demo (DHT_TEST_MODE)
 
 Use `testMode = true` to test fail-safe logic without real hardware.  
 The library validates readings and optionally falls back to the last valid data.
@@ -164,7 +194,7 @@ void loop() {
 }
 ```
 
-## Debug Mode
+## Advanced Examples: Debug Mode
 Demonstrates how to enable debug prints for troubleshooting sensor reads.
 ```cpp
 #include <myDHTlib.h>
@@ -183,7 +213,7 @@ void loop() {
 }
 ```
 
-## Memory-Optimized Build
+## Advanced Examples: Memory-Optimized Build
 Shows usage of the lightweight memory build, which skips debug and test logic.
 ```cpp
 #include <myDHTlib.h>
@@ -208,7 +238,7 @@ void loop() {
 All other examples, such as calibrated readings, raw data access, error handling, async reads are available in the examples/ folder.
 
 ---
-## Error Handling
+## Advanced Examples: Error Handling
 The library uses a clear and minimal error system:
 - DHT_OK
 - DHT_ERROR_NO_RESPONSE
@@ -225,7 +255,7 @@ The library uses a clear and minimal error system:
   dht.getErrorString(err);  // Human-readable error text
   ```
 
-## Raw Data Access
+## Advanced Examples: Raw Data Access
 ```cpp
 DHTRawData raw = dht.getRawData();
 raw.bytes[0..4];      // Raw sensor bytes
@@ -233,11 +263,11 @@ raw.highTimes[0..39]; // High pulse durations in microseconds
 raw.lowTimes[0..39];  // Low pulse durations
 ```
 
-## Auto-Detection
+## Advanced Examples: Auto-Detection
 If created with DHT_AUTO, the library determines whether the sensor is a DHT11 or DHT22 by analyzing returned data.
 If detection fails, the sensor remains in DHT_AUTO mode and detection is retried later.
 
-## MultiSensorManager
+## Advanced Examples: MultiSensorManager
 This example demonstrates the simplest possible setup for reading multiple DHT sensors using MultiSensorManager.
 You register each sensor once with addSensor(), then call readAll() to read every sensor in the list. The manager returns a compact results structure containing temperature, humidity, and error status for each sensor.
 MultiSensorManager does not increase read accuracy; it simply organizes multiple sensors efficiently.
@@ -290,40 +320,60 @@ void loop() {
 ```
 myDHT/
 ├── examples/
-│ ├── BasicRead/
-│ │ └── BasicRead.ino
-│ ├── CalibratedRead/
-│ │ └── CalibratedRead.ino
-│ ├── UnifiedRead/
-│ │ └── UnifiedRead.ino
-│ ├── RawRead/
-│ │ └── RawRead.ino
-│ ├── ErrorHandlingRead/
-│ │ └── ErrorHandlingRead.ino
-│ ├── AsyncRead/
-│ │ └── AsyncRead.ino
-│ ├── AutoDetect/
-│ │ └── AutoDetect.ino
-│ ├── SanityCheck/
-│ │ └── SanityCheck.ino
-│ ├── DebugMode/
-│ │ └── DebugMode.ino
-│ ├── MemoryOptimizedBuild/
-│ │ └── MemoryOptimizedBuild.ino
-│ └── MultiDHTManager/
-│   └── MultiDHTManager.ino
-│
+│   ├── BeginnerExamples/
+│   │   ├── Starter/
+│   │   │   └── Starter.ino
+│   │   ├── TemperatureUnits/
+│   │   │   └── TemperatureUnits.ino
+│   │   ├── Offsets/
+│   │   │   └── Offsets.ino
+│   │   ├── DewPoint/
+│   │   │   └── DewPoint.ino
+│   │   ├── HeatIndex/
+│   │   │   └── HeatIndex.ino
+│   │   ├── FriendlyErrors/
+│   │   │   └── FriendlyErrors.ino
+│   │   └── MinIntervalCheck/
+│   │       └── MinIntervalCheck.ino
+│   └── AdvancedExamples/
+│       ├── BasicRead/
+│       │   └── BasicRead.ino
+│       ├── CalibratedRead/
+│       │   └── CalibratedRead.ino
+│       ├── UnifiedRead/
+│       │   └── UnifiedRead.ino
+│       ├── RawRead/
+│       │   └── RawRead.ino
+│       ├── ErrorHandlingRead/
+│       │   └── ErrorHandlingRead.ino
+│       ├── AsyncRead/
+│       │   └── AsyncRead.ino
+│       ├── AutoDetect/
+│       │   └── AutoDetect.ino
+│       ├── SanityCheck/
+│       │   └── SanityCheck.ino
+│       ├── DebugMode/
+│       │   └── DebugMode.ino
+│       ├── MemoryOptimizedBuild/
+│       │   └── MemoryOptimizedBuild.ino
+│       └── MultiDHTManager/
+│           └── MultiDHTManager.ino
 ├── src/
-│ ├── myDHT.cpp
-│ ├── myDHT.h
-│ ├── MultiDHTManager.cpp
-│ ├── MultiDHTManager.h
-│ └── myDHT_config.h
-│
-├── library.properties
+│   ├── beginner/
+│   │   ├── myDHT.h
+│   │   └── myDHT.cpp
+│   └── advanced/
+│       ├── myDHTPro.h
+│       ├── myDHTPro.cpp
+│       ├── myDHT_config.h
+│       ├── MultiDHTManager.h
+│       └── MultiDHTManager.cpp
 ├── keywords.txt
-├── LICENSE
-└── README.md
+├── library.properties
+├── LICENSE.txt
+├── README.md
+└── CHANGELOG.md
+
 ```
 
 ## Future Improvements
