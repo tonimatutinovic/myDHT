@@ -35,6 +35,9 @@ processAsync        KEYWORD2
 addSensor           KEYWORD2
 readAll             KEYWORD2
 
+enableFriendlyErrors KEYWORD2
+getMinReadInterval   KEYWORD2
+
 #######################################
 # Constants, enums (LITERAL1)
 #######################################
