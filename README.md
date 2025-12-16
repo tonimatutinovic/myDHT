@@ -626,3 +626,13 @@ The **myDHT** library is actively evolving. Planned enhancements include:
 > These features will extend the library’s capabilities while keeping the core simplicity, safety, and performance intact.
 
 ---
+
+## Contribute & Feedback
+ 
+Your feedback and contributions help improve the library and benefit the entire Arduino community.
+
+- Report issues or suggest features on [GitHub Issues](https://github.com/tonimatutinovic/myDHT/issues).  
+- Contributions via pull requests are welcome.  
+- Share your projects and results to inspire others.  
+
+---
