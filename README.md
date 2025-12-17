@@ -441,12 +441,41 @@ void loop() {
 
 ## Tested Hardware
 
-The myDHT library has been **officially tested** on:
+The **myDHT** library has been tested on real hardware to ensure correct timing, reliability, and protocol compliance.
 
-- **Board:** Arduino Uno  
-- **Sensors:** DHT11, DHT22
+### Officially Tested (Maintainer-Verified)
 
-Other boards and sensors that are plug-in compatible (e.g., ATmega328P-based boards or DHT22-compatible sensors) are expected to work but are **not officially tested**.
+These configurations have been **fully tested by the library maintainer**, with all provided examples passing successfully.
+
+| Board                      | MCU        | Clock  | Sensor | Status              |
+|----------------------------|------------|--------|--------|---------------------|
+| Arduino Uno                | ATmega328P | 16 MHz | DHT11  | All examples pass |
+| Arduino Uno                | ATmega328P | 16 MHz | DHT22  | All examples pass |
+| Arduino Nano (Lafvin clone)| ATmega328P | 16 MHz | DHT11  | All examples pass |
+| Arduino Nano (Lafvin clone)| ATmega328P | 16 MHz | DHT22  | All examples pass |
+
+These results confirm correct operation on **ATmega328P-based boards** using the standard **Arduino AVR core**.
+
+---
+
+### Smoke-Tested Hardware *(Planned)*
+
+> This section will be populated after Arduino Library Manager propagation of v2.0.0.
+
+---
+
+### Community-Tested Hardware *(Planned)*
+
+Boards and sensors confirmed by the community will be listed here once verified through issues, discussions, or pull requests.
+
+> Community contributions are welcome and encouraged.
+
+---
+
+### Compatibility Notes
+
+- Boards using **ATmega328P @ 16 MHz** are expected to work reliably  
+- Nano-compatible clones are supported as long as they follow the standard reference design  
 
 ---
 
@@ -501,14 +530,15 @@ Bit-perfect implementation with precise timing ensures:
 
 ## Feature Comparison
 
-| Feature                     | myDHT | Standard DHT Lib | Adafruit DHT |  
-|-----------------------------|:-----:|:----------------:|:------------:|  
-| Partially Async Support     | ✅    | ❌               | ❌           |  
-| Multi-Sensor                | ✅    | ❌               | ❌           |  
-| Auto-Detect                 | ✅    | ❌               | ❌           |  
-| Raw Debug                   | ✅    | ❌               | ❌           |  
-| Sanity Check                | ✅    | ⚠️ Partial       | ⚠️ Partial   |  
-| Memory-Optimized            | ✅    | ❌               | ❌           |  
+| Feature                 | myDHT | Standard DHT Lib | Adafruit DHT |
+|-------------------------|-------|------------------|--------------|
+| Async Read Capability   | Partial | No             | No           |
+| Multiple Sensors        | Supported | Not supported | Not supported |
+| Sensor Auto Detection   | Supported | Manual        | Manual       |
+| Raw Protocol Access     | Available | Not available | Not available |
+| Data Sanity Validation  | Full | Limited          | Limited      |
+| Memory Optimization     | Available | Not available | Not available |
+
 
 ---
 
