@@ -120,13 +120,17 @@ see the next demos using the myDHTPro layer.
 
 ## Next Steps
 
-After this demo, continue with:
+After this demo, continue with upcoming beginner projects:
 
-- Demo 02 – LED Alert (Safe Loop Logic)
-- Demo 03 – OLED Weather Display
-- Intermediate and Advanced demos using myDHTPro
+- **Demo 02 – Greenhouse Monitor**  
+  Reads temperature, humidity, and dew point.  
+  LED indicator shows whether conditions are too dry, too humid, or optimal for plants.
 
-All demos build on each other — no rewiring required.
+- **Demo 03 – Heat Index Indicator**  
+  Uses heat index to control a servo motor (and optional LED).  
+  The servo points to a scale showing the level of heat danger, similar to fire-risk indicators in parks and forests.
+
+These upcoming demos will continue to build on the beginner layer, requiring minimal rewiring and no advanced configuration.
 
 ---
 
