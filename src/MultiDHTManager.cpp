@@ -14,7 +14,8 @@ int MultiDHTManager::readAll(DHTResult results[])
 {
     for (int i = 0; i < count; i++)
     {
-        DHTError err = sensors[i]->read();
+        DHTError err = sensors[i]->readSafe();
+
         results[i].pin = sensors[i]->getPin();
         results[i].temperature = (err == DHT_OK) ? sensors[i]->getTemperature(Celsius) : NAN;
         results[i].humidity = (err == DHT_OK) ? sensors[i]->getHumidity() : NAN;

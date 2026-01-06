@@ -72,6 +72,8 @@ void MyDHT::begin()
 
     _state = IDLE;
     _hasLastValidData = false;
+
+    _lastReadMs = 0;
 }
 
 /*
@@ -81,7 +83,7 @@ void MyDHT::begin()
 DHTError MyDHT::read()
 {
     // Compile-time decision: optimized build
-    if constexpr (optimizedBuild)
+    if constexpr (mydht::optimizedBuild())
     {
         // Memory-light verzija: preskačemo debug i testMode
         DHTError err = readOnce();
@@ -151,12 +153,32 @@ DHTError MyDHT::read()
 }
 
 /*
+  Safe read: enforces minimum interval between reads.
+  - If called too early, it returns the last known status (DHT_OK if last read was OK),
+    without touching the sensor again.
+*/
+DHTError MyDHT::readSafe()
+{
+    unsigned long now = millis();
+    uint16_t minInt = getMinReadInterval();
+
+    if (_lastReadMs != 0 && (now - _lastReadMs) < minInt)
+    {
+        // Too soon: do not read again
+        return _lastError;
+    }
+
+    _lastReadMs = now;
+    return read();
+}
+
+/*
   Perform a single read attempt from the sensor
   @return DHTError code
 */
 DHTError MyDHT::readOnce()
 {
-    if constexpr (!optimizedBuild)
+    if constexpr (!mydht::optimizedBuild())
     {
         if (debugMode)
             debugPrint("Starting single read attempt on pin %d", _pin);
@@ -203,7 +225,7 @@ DHTError MyDHT::readOnce()
 
     DHTError err = read5Bytes(); // Normal mode: read raw data from sensor
 
-    if constexpr (!optimizedBuild)
+    if constexpr (!mydht::optimizedBuild())
     {
         if (debugMode)
             debugPrint("readOnce result: %s", getErrorString(err));
@@ -262,7 +284,7 @@ DHTError MyDHT::read5Bytes()
         return DHT_ERROR_BIT_TIMEOUT;
     }
 
-    if constexpr (!optimizedBuild)
+    if constexpr (!mydht::optimizedBuild())
     {
         if (debugMode)
             debugPrint("Raw bytes: %X %X %X %X %X", _byte1, _byte2, _byte3, _byte4, _byte5);
@@ -272,7 +294,7 @@ DHTError MyDHT::read5Bytes()
     if (sum != _byte5)
     {
         setError(DHT_ERROR_CHECKSUM);
-        if constexpr (!optimizedBuild)
+        if constexpr (!mydht::optimizedBuild())
         {
             if (debugMode)
                 debugPrint("Checksum mismatch: %X != %X", sum, _byte5);
@@ -282,7 +304,7 @@ DHTError MyDHT::read5Bytes()
 
     setError(DHT_OK);
     _failureCount = 0;
-    if constexpr (!optimizedBuild)
+    if constexpr (!mydht::optimizedBuild())
     {
         if (debugMode)
             debugPrint("read5Bytes: OK, checksum verified");
@@ -422,7 +444,7 @@ float MyDHT::getHeatIndex(TempUnit unit)
 
 DHTData MyDHT::getData(TempUnit unit)
 {
-    if constexpr (optimizedBuild)
+    if constexpr (mydht::optimizedBuild())
     {
         DHTData data;
         data.status = read(); // just read and makeData
@@ -612,7 +634,7 @@ void MyDHT::startAsyncRead(DHTCallback cb)
 */
 void MyDHT::processAsync()
 {
-    if constexpr (optimizedBuild)
+    if constexpr (mydht::optimizedBuild())
     {
         // Memory-light build: read5Bytes and return
         if (_state == READ_BITS_BLOCKING)
@@ -748,10 +770,16 @@ void MyDHT::setType(DHTType type) { _type = type; }
 
 /*
   @return minimum recommended interval between reads (ms)
+  DHT11: ~1s minimum (datasheet), DHT22: ~2s minimum (datasheet).
+  AUTO: return 2000ms as a safe default.
 */
 uint16_t MyDHT::getMinReadInterval()
 {
-    return (_type == DHT11) ? 2000 : 1000; // ms
+    if (_type == DHT22)
+        return 2000;
+    if (_type == DHT11)
+        return 1200; // Note: DHT11 datasheet allows ~1s, but 1.2s is often more reliable on real wiring/modules.
+    return 2000;     // DHT_AUTO -> safe default
 }
 
 /*
@@ -805,7 +833,7 @@ bool MyDHT::sanityCheck()
     // DHTData object from the current raw bytes
     DHTData d = makeData(Celsius);
 
-    if constexpr (!optimizedBuild)
+    if constexpr (!mydht::optimizedBuild())
     {
         if (debugMode)
             debugPrint("Sanity check: Temp=%f, Hum=%f", d.temp, d.hum);
@@ -821,7 +849,7 @@ bool MyDHT::sanityCheck()
     // Reject invalid or out-of-range temperatures
     if (isnan(temp) || temp < minTemp || temp > maxTemp)
     {
-        if constexpr (!optimizedBuild)
+        if constexpr (!mydht::optimizedBuild())
         {
             if (debugMode)
                 debugPrint("Sanity check failed: Temperature=%f out of range", d.temp);
@@ -832,7 +860,7 @@ bool MyDHT::sanityCheck()
     // Reject invalid humidity (must be 0–100%)
     if (isnan(hum) || hum < 0.0f || hum > 100.0f)
     {
-        if constexpr (!optimizedBuild)
+        if constexpr (!mydht::optimizedBuild())
         {
             if (debugMode)
                 debugPrint("Sanity check failed: Humidity=%f out of range", d.hum);
@@ -849,7 +877,7 @@ bool MyDHT::sanityCheck()
 */
 void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5)
 {
-    if constexpr (optimizedBuild)
+    if constexpr (mydht::optimizedBuild())
     {
         // Test mode disabled
         return;
@@ -879,7 +907,7 @@ void MyDHT::setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t 
 */
 void MyDHT::debugPrint(const char *fmt, ...)
 {
-    if constexpr (optimizedBuild)
+    if constexpr (mydht::optimizedBuild())
     {
         // In optimized build debug mode is disabled
         return;

@@ -155,12 +155,15 @@ public:
   bool isConnected() const;                 // Returns true if the sensor responded at least once
   const char *getErrorString(DHTError err); // Converts a DHTError code to a human-readable string
 
-  static constexpr bool optimizedBuild = DHT_OPTIMIZED_BUILD;
+  // static constexpr bool optimizedBuild = DHT_OPTIMIZED_BUILD;
   bool testMode = false;  // If true, enables setRawBytes()
   bool debugMode = false; // If true, enables debugPrint()
 
   // Injects simulated raw sensor bytes for testing (used only when testMode = true)
   void setRawBytes(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4, uint8_t b5);
+
+  // Safe read: enforces getMinReadInterval() timing
+  DHTError readSafe();
 
 private:
   uint8_t _pin;             // Pin where sensor is connected
@@ -195,8 +198,9 @@ private:
 
   void detectType(); // Detects sensor type DHT11/DHT22
 
-  DHTError _lastError = DHT_OK; // Stores the last error code occured
-  uint16_t _failureCount = 0;   // Counts consecutive read failures
+  DHTError _lastError = DHT_OK;  // Stores the last error code occured
+  uint16_t _failureCount = 0;    // Counts consecutive read failures
+  unsigned long _lastReadMs = 0; // last time read() was called (for min-interval guard)
 
   /*
     Updates the last error and adjusts the failure count.

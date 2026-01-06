@@ -1,11 +1,15 @@
 /*
   Example: MyDHT Memory Optimized Build Demo
-  Shows how optimized build works without debug/test modes
+  ----------------------------------
+  Demonstrates the "optimized build" configuration which removes debug/test features
+  to reduce memory usage.
+
+  Configure build mode in: myDHT_config.h
+    #define DHT_OPTIMIZED_BUILD 0  // full
+    #define DHT_OPTIMIZED_BUILD 1  // optimized
 */
 
 #include <myDHTPro.h>
-
-// CONFIG: set DHT_OPTIMIZED_BUILD true/false in myDHT_config.h
 
 // Pin where DHT sensor is connected
 #define DHT_PIN 2
@@ -22,14 +26,16 @@ void setup()
     // Start sensor
     dht.begin();
 
-#if !DHT_OPTIMIZED_BUILD
-    // Only in full build: enable debug/test modes
-    dht.debugMode = true;
-    dht.testMode = true;
-    Serial.println("Full-featured build: debug and test modes enabled");
-#else
-    Serial.println("Optimized build: debug and test modes disabled");
-#endif
+    // In full build you may enable debug output (testMode is for injected raw bytes)
+    if (!mydht::optimizedBuild())
+    {
+        dht.debugMode = true;
+        Serial.println("Full build: debug enabled");
+    }
+    else
+    {
+        Serial.println("Optimized build: debug/test features disabled");
+    }
 }
 
 void loop()
@@ -58,5 +64,5 @@ void loop()
         Serial.println(dht.getErrorString(data.status));
     }
 
-    delay(2000); // Wait 2 sec before next read
+    delay(dht.getMinReadInterval());
 }

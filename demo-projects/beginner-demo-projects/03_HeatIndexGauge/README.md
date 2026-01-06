@@ -101,7 +101,7 @@ movement. Precision is not the goal — **visual clarity is**.
 
 The Heat Index Gauge in action.
 
-![Heat Index Gauge](HeatIndexGauge_hero.jpg)
+![Heat Index Gauge](media/HeatIndexGauge_hero.jpg)
 
 ---
 
@@ -110,7 +110,7 @@ The Heat Index Gauge in action.
 The video below shows the gauge reacting in real time as temperature and
 humidity change.
 
-▶️ **Demo video:** `HeatIndexGauge_demo.mov`
+▶️ **Demo video:** `media/HeatIndexGauge_demo.mov`
 
 ---
 

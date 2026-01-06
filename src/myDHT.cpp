@@ -13,10 +13,11 @@ void myDHT::begin()
     _sensor.begin();
 }
 
-// Minimal interval based on sensor type
+// Minimal interval
 unsigned long myDHT::_minInterval()
 {
-    return (_sensor.getType() == DHT11) ? 2000 : 1000;
+    // Reliability-first for both DHT11 and DHT22
+    return 2000;
 }
 
 // Internal sensor read with caching
@@ -156,8 +157,5 @@ void myDHT::enableFriendlyErrors(bool enable)
 // Minimum interval between reads
 unsigned long myDHT::getMinInterval()
 {
-    if (_sensor.getType() == DHT11)
-        return 2000;
-    else
-        return 1000;
+    return _minInterval();
 }

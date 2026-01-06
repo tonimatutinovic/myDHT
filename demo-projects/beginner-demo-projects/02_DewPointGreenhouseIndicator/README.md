@@ -84,67 +84,13 @@ The RGB LED updates automatically based on live sensor readings.
 
 ## Visual Example
 
-![Live Dew-Point Indicator](demo02_greenhouse_indicator_green.jpg)
+![Live Dew-Point Indicator](images/demo02_greenhouse_indicator_green.jpg)
 
 ---
 
 ## Code
 
-```cpp
-#include <myDHT.h>
-
-const int DHT_PIN = 2;
-myDHT dht(DHT_PIN);
-
-// RGB pins
-const int PIN_R = 11;
-const int PIN_G = 10;
-const int PIN_B = 9;
-
-void setRGB(uint8_t r, uint8_t g, uint8_t b)
-{
-  analogWrite(PIN_R, r);
-  analogWrite(PIN_G, g);
-  analogWrite(PIN_B, b);
-}
-
-void setup()
-{
-  Serial.begin(115200);
-  dht.begin();
-
-  pinMode(PIN_R, OUTPUT);
-  pinMode(PIN_G, OUTPUT);
-  pinMode(PIN_B, OUTPUT);
-
-  setRGB(0, 0, 0);
-}
-
-void loop()
-{
-  float t  = dht.getTemperature(Celsius);
-  float h  = dht.getHumidity();
-  float dp = dht.dewPoint(Celsius);
-
-  float spread = t - dp;
-
-  if (spread < 3.0) {
-    setRGB(255, 0, 0);       // Red
-  } else if (spread < 5.0) {
-    setRGB(255, 120, 0);     // Yellow
-  } else {
-    setRGB(0, 255, 0);       // Green
-  }
-
-  Serial.print("T: "); Serial.print(t); Serial.print(" C, ");
-  Serial.print("RH: "); Serial.print(h); Serial.print(" %, ");
-  Serial.print("DP: "); Serial.print(dp); Serial.print(" C, ");
-  Serial.print("T-DP: "); Serial.print(spread); Serial.println(" C");
-  Serial.println("-------------------------------------------------------------");
-
-  delay(dht.getMinInterval());
-}
-```
+Open `DewPointGreenhouseIndicator.ino` and upload it to your Arduino.
 
 ---
 

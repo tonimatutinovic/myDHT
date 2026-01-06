@@ -122,12 +122,12 @@ see the next demos using the myDHTPro layer.
 
 After this demo, continue with upcoming beginner projects:
 
-- **Demo 02 – Greenhouse Monitor**  
+- **Demo 02 – Dew Point Greenhouse Indicator**  
   Reads temperature, humidity, and dew point.  
   LED indicator shows whether conditions are too dry, too humid, or optimal for plants.
 
-- **Demo 03 – Heat Index Indicator**  
-  Uses heat index to control a servo motor (and optional LED).  
+- **Demo 03 – Heat Index Gauge**  
+  Uses heat index to control a servo motor.  
   The servo points to a scale showing the level of heat danger, similar to fire-risk indicators in parks and forests.
 
 These upcoming demos will continue to build on the beginner layer, requiring minimal rewiring and no advanced configuration.

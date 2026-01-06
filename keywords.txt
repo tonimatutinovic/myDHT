@@ -1,28 +1,35 @@
 #######################################
 # Classes (KEYWORD1)
 #######################################
+myDHT               KEYWORD1
 MyDHT               KEYWORD1
 MultiDHTManager     KEYWORD1
 DHTData             KEYWORD1
 DHTRawData          KEYWORD1
+DHTResult           KEYWORD1
 
 #######################################
 # Methods (KEYWORD2)
 #######################################
 begin               KEYWORD2
 read                KEYWORD2
-readOnce            KEYWORD2
+readSafe            KEYWORD2
 getTemperature      KEYWORD2
 getHumidity         KEYWORD2
 getHeatIndex        KEYWORD2
 getDewPoint         KEYWORD2
 getData             KEYWORD2
 getRawData          KEYWORD2
+
+getType             KEYWORD2
+setType             KEYWORD2
 getPin              KEYWORD2
+getMinReadInterval   KEYWORD2
 setRawBytes         KEYWORD2
 
-setTempOffset       KEYWORD2
-setHumOffset        KEYWORD2
+setTemperatureOffset KEYWORD2
+setHumidityOffset    KEYWORD2
+setRetries           KEYWORD2
 
 getLastError        KEYWORD2
 getFailureCount     KEYWORD2
@@ -31,12 +38,13 @@ getErrorString      KEYWORD2
 
 startAsync          KEYWORD2
 processAsync        KEYWORD2
+isReading           KEYWORD2
 
 addSensor           KEYWORD2
 readAll             KEYWORD2
 
 enableFriendlyErrors KEYWORD2
-getMinReadInterval   KEYWORD2
+getMinInterval       KEYWORD2
 
 #######################################
 # Constants, enums (LITERAL1)
@@ -52,3 +60,7 @@ DHT_ERROR_CHECKSUM          LITERAL1
 DHT_ERROR_BIT_TIMEOUT       LITERAL1
 DHT_ERROR_INTERNAL          LITERAL1
 DHT_ERROR_SANITY            LITERAL1
+
+Celsius             LITERAL1
+Fahrenheit          LITERAL1
+Kelvin              LITERAL1
