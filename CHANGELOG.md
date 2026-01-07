@@ -6,7 +6,31 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 ---
+## [2.0.2] – 07.01.2026.
 
+### Added
+- **Beginner demo projects**
+  - Zero-Config Weather Monitor
+  - Dew-Point Greenhouse Indicator
+  - Heat Index Gauge
+- Wiring diagrams, images, and media assets for beginner demo projects
+- `readSafe()` in **myDHTPro** to enforce sensor-safe minimum interval between reads
+
+### Changed
+- Updated minimum read interval behavior to better match real-world DHT11/DHT22 sampling reliability
+- Improved **memory-optimized build** flow (clearer behavior when debug/test features are disabled at compile time)
+- Reorganized `examples/` folder for improved Arduino IDE discoverability
+- Standardized example naming and ordering for beginner and advanced layers
+- Updated README with:
+  - clearer layered architecture explanation
+  - refined design rationale
+  - complete repository, examples, and demo-project structure
+
+### Fixed
+- Read-interval edge cases that could lead to unstable/`NaN` readings when polled too quickly
+- Minor documentation inconsistencies and outdated references (examples, file names, folder structure)
+
+---
 ## [2.0.0] – 15.12.2025.
 
 ### Added
