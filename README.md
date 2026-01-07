@@ -8,7 +8,7 @@
   <a href="https://github.com/tonimatutinovic/myDHT/stargazers">
     <img src="https://img.shields.io/github/stars/tonimatutinovic/myDHT?style=social">
   </a>
-  <a href="https://github.com/tonimatutinovic/myDHT/blob/main/LICENSE.txt">
+  <a href="https://github.com/tonimatutinovic/myDHT/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-green.svg">
   </a>
   <img src="https://img.shields.io/badge/platform-Arduino-blue">
@@ -126,7 +126,7 @@ Designed for **simplicity, safety, and correctness**. Ideal for beginners, quick
 
 ### Advanced Layer – `myDHTPro`
 
-Designed for **full control, transparency, and diagnostics**. Ideal for experienced users, research, debugging, and production-level monitoring
+Designed for **full control, transparency, and diagnostics**. Ideal for experienced users, research, debugging, and production-level monitoring.
 
 This layer makes the DHT protocol **observable, debuggable, and extensible**.
 
@@ -256,7 +256,7 @@ The advanced layer (myDHTPro) exposes the full DHT protocol, debug, async reads,
 #### Basic Reading
 
 ```cpp
-#include <myDHTlib.h>
+#include <myDHTPro.h>
 
 const int DHT_PIN = 2;
 MyDHT dht(DHT_PIN, DHT_AUTO); // auto-detect DHT11 or DHT22
@@ -285,7 +285,7 @@ void loop() {
 #### Sanity-Check / Fail-Safe Demo (DHT_TEST_MODE)
 
 ```cpp
-#include <myDHTlib.h>
+#include <myDHTPro.h>
 
 MyDHT dht(2);
 dht.testMode = true;  // Enables testing without real hardware
@@ -322,7 +322,7 @@ void loop() {
 #### Debug Mode
 
 ```cpp
-#include <myDHTlib.h>
+#include <myDHTPro.h>
 
 MyDHT dht(2);
 
@@ -343,7 +343,7 @@ void loop() {
 #### Memory-Optimized Build
 
 ```cpp
-#include <myDHTlib.h>
+#include <myDHTPro.h>
 
 MyDHT dht(2);
 
@@ -401,38 +401,11 @@ MyDHT dht(DHT_PIN, DHT_AUTO); // Library detects DHT11/DHT22
 
 #### Multi-Sensor Manager
 
-```cpp
-// MultiSensorManager organizes multiple sensors efficiently without affecting read accuracy
+The `MultiDHTManager` helper allows managing multiple DHT sensors
+simultaneously with centralized reading and error tracking.
 
-#include <MultiSensorManager.h>
-#include <myDHTlib.h>
-
-MultiSensorManager manager(5);
-MyDHT dht1(2, DHT11);
-MyDHT dht2(3, DHT22);
-
-void setup() {
-    Serial.begin(115200);
-    dht1.begin(); dht2.begin();
-    manager.addSensor(dht1);
-    manager.addSensor(dht2);
-}
-
-void loop() {
-    manager.readAll();
-    auto results = manager.getResults();
-    for (int i=0; i<results.count; i++) {
-        Serial.print("Pin "); Serial.print(results.data[i].pin); Serial.print(" → ");
-        if (results.data[i].error == DHT_OK) {
-            Serial.print(results.data[i].temperature);
-            Serial.print("°C, "); Serial.println(results.data[i].humidity);
-        } else {
-            Serial.print("Error: "); Serial.println(results.data[i].error);
-        }
-    }
-    delay(2000);
-}
-```
+See the `10_MultiDHTManager` example in the `examples/Advanced/` folder
+for a complete working demonstration.
 
 - Full set of examples available in the `examples/` folder for advanced usage.
 - See documentation for calibration, async callbacks, and debug options.
@@ -458,13 +431,13 @@ These results confirm correct operation on **ATmega328P-based boards** using the
 
 ---
 
-### Smoke-Tested Hardware *(Planned)*
+### Smoke-Tested Hardware
 
-> This section will be populated after Arduino Library Manager propagation of v2.0.0.
+> This section will be populated after wider community adoption of v2.0.2.
 
 ---
 
-### Community-Tested Hardware *(Planned)*
+### Community-Tested Hardware
 
 Boards and sensors confirmed by the community will be listed here once verified through issues, discussions, or pull requests.
 
@@ -478,67 +451,41 @@ Boards and sensors confirmed by the community will be listed here once verified 
 - Nano-compatible clones are supported as long as they follow the standard reference design  
 
 ---
+## Design Decisions & Key Advantages
 
-# 🏆 Why myDHT Is Better Than Standard DHT Libraries
+**myDHT** is designed around a set of deliberate engineering decisions focused on
+**reliability**, **predictable behavior**, and **clear separation of concerns**.
 
-**myDHT** is designed from the ground up to address limitations found in all existing DHT libraries.  
-It is faster, safer, more accurate, and far more flexible.
+Rather than choosing between simplicity and control, myDHT provides **both** —
+through a layered architecture that scales with user experience.
 
-### 1. Partially Non-Blocking Reads (Async State Machine)
-Most DHT libraries freeze the CPU for up to **2 seconds** per reading.  
-**myDHT uses a partially non-blocking state machine**, keeping the loop responsive while reading the sensor.  
-> Note: The low-level 40-bit read must remain blocking for accurate timing, but all other operations are asynchronous.
+### Predictable Timing & Safe Sensor Access
+DHT sensors are sensitive to timing and sampling intervals.  
+myDHT enforces **sensor-safe minimum read intervals** and manages internal caching,
+preventing accidental over-sampling and unstable readings.
 
-Ideal for projects involving:
-- LEDs, motors, displays
-- WiFi or Bluetooth communication
-- Multi-tasking applications
+### Layered API Design
+- **Beginner layer (`myDHT`)** provides a safe, simplified API that prevents misuse.
+- **Advanced layer (`myDHTPro`)** exposes full protocol access, diagnostics, and control.
 
-### 2. Multi-Sensor Support
-Unlike standard libraries limited to one global sensor, **myDHT supports multiple sensors** via `MultiSensorManager` — perfect for weather stations or multi-room monitoring.
+Both layers share the same core implementation and produce identical results.
 
-### 3. Automatic Sensor Detection
-**myDHT auto-detects DHT11 vs DHT22**, removing user configuration errors common in other libraries.
+### Explicit Error Handling & Validation
+Instead of silently returning incorrect values, myDHT:
+- reports explicit error codes
+- validates readings against realistic physical ranges
+- tracks consecutive failures
+- optionally falls back to the last known valid measurement
 
-### 4. Built-In Sanity Check & Fail-Safe Logic
-Glitches, corrupted values, or unrealistic readings are rejected automatically:
-- Invalid pulse timing
-- Corrupted humidity/temperature combinations
-- Out-of-range readings
+### Protocol Transparency
+The advanced layer exposes raw sensor bytes, pulse timing, and detailed debug output,
+making the DHT protocol observable and debuggable when needed.
 
-### 5. Raw Pulse Debug Mode
-Provides full transparency:
-- High/low pulse timings
-- Complete 40-bit raw bitstream
-- Error cause reporting
+### Zero Dependencies & Embedded-Friendly Design
+myDHT is fully self-contained, with no external dependencies and predictable memory usage.
+Optional compile-time optimizations allow deployment on resource-constrained MCUs.
 
-Ideal for wiring troubleshooting and research.
-
-### 6. Memory-Optimized Build
-Optional compile-time flags reduce RAM usage, allowing deployment on memory-constrained MCUs (e.g., ATmega8, ATtiny).
-
-### 7. Zero Dependencies / Minimal Overhead
-**myDHT is fully standalone** — no external libraries or Arduino helper utilities are required.
-
-### 8. Optimized DHT Engine
-Bit-perfect implementation with precise timing ensures:
-- Fewer checksum failures
-- Fewer retries
-- More accurate, consistent readings
-
----
-
-## Feature Comparison
-
-| Feature                 | myDHT | Standard DHT Lib | Adafruit DHT |
-|-------------------------|-------|------------------|--------------|
-| Async Read Capability   | Partial | No             | No           |
-| Multiple Sensors        | Supported | Not supported | Not supported |
-| Sensor Auto Detection   | Supported | Manual        | Manual       |
-| Raw Protocol Access     | Available | Not available | Not available |
-| Data Sanity Validation  | Full | Limited          | Limited      |
-| Memory Optimization     | Available | Not available | Not available |
-
+In short, myDHT prioritizes **correctness, clarity, and robustness** over convenience shortcuts.
 
 ---
 
@@ -583,56 +530,84 @@ Documents/Arduino/libraries/myDHT
 myDHT/
 ├── examples/
 │   ├── BeginnerExamples/
-│   │   ├── Starter/
-│   │   │   └── Starter.ino
-│   │   ├── TemperatureUnits/
-│   │   │   └── TemperatureUnits.ino
-│   │   ├── Offsets/
-│   │   │   └── Offsets.ino
-│   │   ├── DewPoint/
-│   │   │   └── DewPoint.ino
-│   │   ├── HeatIndex/
-│   │   │   └── HeatIndex.ino
-│   │   ├── FriendlyErrors/
-│   │   │   └── FriendlyErrors.ino
-│   │   └── MinIntervalCheck/
-│   │       └── MinIntervalCheck.ino
+│   │   ├── 01_Starter/
+│   │   │   └── 01_Starter.ino
+│   │   ├── 02_TemperatureUnits/
+│   │   │   └── 02_TemperatureUnits.ino
+│   │   ├── 03_DewPoint/
+│   │   │   └── 03_DewPoint.ino
+│   │   ├── 04_HeatIndex/
+│   │   │   └── 04_HeatIndex.ino
+│   │   ├── 05_MinIntervalCheck/
+│   │   │   └── 05_MinIntervalCheck.ino
+│   │   ├── 06_Offsets/
+│   │   │   └── 06_Offsets.ino
+│   │   └── 07_FriendlyErrors/
+│   │       └── 07_FriendlyErrors.ino
+│   │
 │   └── AdvancedExamples/
-│       ├── BasicRead/
-│       │   └── BasicRead.ino
-│       ├── CalibratedRead/
-│       │   └── CalibratedRead.ino
-│       ├── UnifiedRead/
-│       │   └── UnifiedRead.ino
-│       ├── RawRead/
-│       │   └── RawRead.ino
-│       ├── ErrorHandlingRead/
-│       │   └── ErrorHandlingRead.ino
-│       ├── AsyncRead/
-│       │   └── AsyncRead.ino
-│       ├── AutoDetect/
-│       │   └── AutoDetect.ino
-│       ├── SanityCheck/
-│       │   └── SanityCheck.ino
-│       ├── DebugMode/
-│       │   └── DebugMode.ino
-│       ├── MemoryOptimizedBuild/
-│       │   └── MemoryOptimizedBuild.ino
-│       └── MultiDHTManager/
-│           └── MultiDHTManager.ino
+│       ├── 01_BasicRead/
+│       │   └── 01_BasicRead.ino
+│       ├── 02_AutoDetect/
+│       │   └── 02_AutoDetect.ino
+│       ├── 03_UnifiedRead/
+│       │   └── 03_UnifiedRead.ino
+│       ├── 04_CalibratedRead/
+│       │   └── 04_CalibratedRead.ino
+│       ├── 05_SanityCheck/
+│       │   └── 05_SanityCheck.ino
+│       ├── 06_ErrorHandlingRead/
+│       │   └── 06_ErrorHandlingRead.ino
+│       ├── 07_DebugMode/
+│       │   └── 07_DebugMode.ino
+│       ├── 08_RawRead/
+│       │   └── 08_RawRead.ino
+│       ├── 09_AsyncRead/
+│       │   └── 09_AsyncRead.ino
+│       ├── 10_MemoryOptimizedBuild/
+│       │   └── 10_MemoryOptimizedBuild.ino
+│       └── 11_MultiDHTManager/
+│           └── 11_MultiDHTManager.ino
+│
+├── demo-projects/
+│   └── beginner-demo-projects/
+│       ├── 01_ZeroConfigWeatherMonitor/
+│       │   ├── README.md
+│       │   └── ZeroConfigWeatherMonitor/
+│       │       └── ZeroConfigWeatherMonitor.ino
+│       │
+│       ├── 02_DewPointGreenhouseIndicator/
+│       │   ├── README.md
+│       │   ├── wiring.png
+│       │   ├── images/
+│       │   │   ├── demo02_greenhouse_indicator_green.jpg
+│       │   │   └── demo02_greenhouse_indicator_red.jpg
+│       │   └── DewPointGreenhouseIndicator/
+│       │       └── DewPointGreenhouseIndicator.ino
+│       │
+│       └── 03_HeatIndexGauge/
+│           ├── README.md
+│           ├── wiring.png
+│           ├── media/
+│           │   ├── HeatIndexGauge_hero.jpg
+│           │   ├── HeatIndexGauge_comfort.jpg
+│           │   ├── HeatIndexGauge_warning.jpg
+│           │   └── HeatIndexGauge_demo.mov
+│           └── HeatIndexGauge/
+│               └── HeatIndexGauge.ino
+│
 ├── src/
-│   ├── beginner/
-│   │   ├── myDHT.h
-│   │   └── myDHT.cpp
-│   └── advanced/
-│       ├── myDHTPro.h
-│       ├── myDHTPro.cpp
-│       ├── myDHT_config.h
-│       ├── MultiDHTManager.h
-│       └── MultiDHTManager.cpp
+│   ├── myDHT.h
+│   ├── myDHT.cpp
+│   ├── myDHTPro.h
+│   ├── myDHTPro.cpp
+│   ├── myDHT_config.h
+│   ├── MultiDHTManager.h
+│   └── MultiDHTManager.cpp
+│
 ├── keywords.txt
 ├── library.properties
-├── LICENSE.txt
+├── LICENSE
 ├── README.md
 └── CHANGELOG.md
 
