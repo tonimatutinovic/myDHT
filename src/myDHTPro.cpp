@@ -32,10 +32,10 @@ MyDHT::MyDHT(uint8_t pin, DHTType type, uint8_t retries)
         break;
 
     case DHT22:
-        _timings.startLowMs = 1;      // Pull LOW duration in ms
-        _timings.ackTimeoutUs = 1000; // ACK timeout in µs
+        _timings.startLowMs = 2;      // Pull LOW duration in ms
+        _timings.ackTimeoutUs = 3000; // ACK timeout in µs
         _timings.ackDoneUs = 80;
-        _timings.bitTimeoutUs = 80;
+        _timings.bitTimeoutUs = 200;
         _timings.highThresholdUs = 40;
         break;
 
@@ -87,6 +87,12 @@ DHTError MyDHT::read()
     {
         // Memory-light verzija: preskačemo debug i testMode
         DHTError err = readOnce();
+        if (err != DHT_OK)
+        {
+            setError(err);
+            return err;
+        }
+
         if (!sanityCheck())
         {
             setError(DHT_ERROR_SANITY);
@@ -738,17 +744,19 @@ void MyDHT::detectType()
 {
     // 1) Try reading as DHT22
     _type = DHT22;
-    _timings = {1, 1000, 80, 80, 40};
-    if (readOnce() == DHT_OK)
+    _timings = {2, 3000, 80, 200, 40};
+    if (readOnce() == DHT_OK && sanityCheck())
     {
         // Valid DHT22 frame → finished
         return;
     }
 
+    delay(1500);
+
     // 2) Try reading as DHT11
     _type = DHT11;
-    _timings = {18, 5000, 80, 120, 50};
-    if (readOnce() == DHT_OK)
+    _timings = {18, 5000, 80, 200, 50};
+    if (readOnce() == DHT_OK && sanityCheck())
     {
         // Valid DHT11 frame → finished
         return;
@@ -766,7 +774,23 @@ DHTType MyDHT::getType() { return _type; }
 /*
   Setter for sensor type
 */
-void MyDHT::setType(DHTType type) { _type = type; }
+void MyDHT::setType(DHTType type)
+{
+    _type = type;
+
+    switch (_type)
+    {
+    case DHT11:
+        _timings = {18, 5000, 80, 200, 50};
+        break;
+    case DHT22:
+        _timings = {2, 3000, 80, 200, 40};
+        break;
+    default:
+        _timings = {18, 5000, 80, 200, 50};
+        break;
+    }
+}
 
 /*
   @return minimum recommended interval between reads (ms)
@@ -818,6 +842,8 @@ const char *MyDHT::getErrorString(DHTError err)
         return "Timeout while reading a bit";
     case DHT_ERROR_INTERNAL:
         return "Unexpected internal failure";
+    case DHT_ERROR_SANITY:
+        return "Sanity check failed";
     default:
         return "Unknown error";
     }
