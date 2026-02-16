@@ -6,6 +6,18 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 ---
+## [2.0.3] – 16.02.2026.
+
+### Fixed
+- Improved DHT11/DHT22 auto-detection robustness
+- Added delay between detection attempts to respect sensor minimum read intervals
+- `setType()` now correctly updates internal timing configuration
+- Fixed timing edge cases causing intermittent DHT22 timeouts
+- Improved sanity-check error reporting (no longer reported as "Unknown error")
+
+### Verified
+- Tested with real DHT11 and DHT22 hardware (forced and auto modes)
+---
 ## [2.0.2] – 07.01.2026.
 
 ### Added
