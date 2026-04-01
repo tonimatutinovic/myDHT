@@ -1,0 +1,38 @@
+name: Arduino CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  compile-examples:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+        with:
+          version: "1.x"
+
+      - name: Update package index
+        run: arduino-cli core update-index
+
+      - name: Install AVR core
+        run: arduino-cli core install arduino:avr
+
+      - name: Compile all examples for Arduino Uno
+        run: |
+          find examples -name "*.ino" | while read sketch; do
+            echo "Compiling $sketch for arduino:avr:uno"
+            arduino-cli compile --fqbn arduino:avr:uno "$sketch"
+          done
+
+      - name: Compile all examples for Arduino Nano
+        run: |
+          find examples -name "*.ino" | while read sketch; do
+            echo "Compiling $sketch for arduino:avr:nano"
+            arduino-cli compile --fqbn arduino:avr:nano "$sketch"
+          done
