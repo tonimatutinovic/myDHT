@@ -657,6 +657,7 @@ void MyDHT::processAsync()
     switch (_state)
     {
     case START_SIGNAL:
+    {
         // Wait for the start signal (LOW) to last at least 20ms
         if (millis() - _timer >= _timings.startLowMs)
         {
@@ -667,8 +668,10 @@ void MyDHT::processAsync()
             _state = WAIT_ACK;           // Change state to WAIT_ACK
         }
         break;
+    }
 
     case WAIT_ACK:
+    {
         if (micros() - _timer >= _timings.ackDoneUs)
         {
             // Wait for the sensor to pull the line LOW (after ACK)
@@ -683,8 +686,10 @@ void MyDHT::processAsync()
             }
         }
         break;
+    }
 
     case READ_BITS_BLOCKING:
+    {
         DHTError e = read5Bytes(); // Read all 5 bytes from the sensor
         DHTData data = makeData();
         data.status = e;
@@ -692,8 +697,10 @@ void MyDHT::processAsync()
             _callback(data); // Call user-defined callback with the data
         _state = IDLE;
         break;
+    }
 
     case ERROR_STATE:
+    {
         // Handle errors such as no response
         DHTData d;
         setError(DHT_ERROR_NO_RESPONSE);
@@ -702,6 +709,7 @@ void MyDHT::processAsync()
             _callback(d); // Notify user via callback
         _state = IDLE;    // Reset state
         break;
+    }
 
     default:
         break;
@@ -958,7 +966,7 @@ void MyDHT::debugPrint(const char *fmt, ...)
             if (*traverse == '%' && *(traverse + 1) == 'f') // float
             {
                 double f = va_arg(args, double);
-                dtostrf(f, 5, 1, tempBuf); // width=5, 1 decimal place
+                snprintf(tempBuf, sizeof(tempBuf), "%5.1f", f); // width=5, 1 decimal place
                 int n = snprintf(bufPtr, remaining, "%s", tempBuf);
                 bufPtr += n;
                 remaining -= n;
