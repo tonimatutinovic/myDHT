@@ -2,6 +2,9 @@
   <a href="https://github.com/tonimatutinovic/myDHT/releases">
     <img src="https://img.shields.io/github/v/release/tonimatutinovic/myDHT?label=Release">
   </a>
+  <a href="https://github.com/tonimatutinovic/myDHT/actions">
+    <img src="https://github.com/tonimatutinovic/myDHT/actions/workflows/ci.yml/badge.svg">
+  </a>
   <a href="https://www.ardu-badge.com/myDHT">
     <img src="https://www.ardu-badge.com/badge/myDHT.svg">
   </a>
@@ -431,9 +434,16 @@ These results confirm correct operation on **ATmega328P-based boards** using the
 
 ---
 
-### Smoke-Tested Hardware
+### CI-Verified Compatibility
 
-> This section will be populated after wider community adoption of v2.0.2.
+These platforms are verified via automated CI builds, ensuring that all examples compile successfully across architectures:
+
+- Arduino Uno / Nano (AVR)
+- Arduino Zero (SAMD)
+- ESP32
+- ESP8266
+
+> Note: CI verifies compilation compatibility; real-world behavior may vary depending on hardware quality and wiring.
 
 ---
 
