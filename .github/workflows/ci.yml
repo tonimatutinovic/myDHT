@@ -27,12 +27,12 @@ jobs:
         run: |
           find examples -name "*.ino" | while read sketch; do
             echo "Compiling $sketch for arduino:avr:uno"
-            arduino-cli compile --fqbn arduino:avr:uno "$sketch"
+            arduino-cli compile --library . --fqbn arduino:avr:uno "$sketch"
           done
 
       - name: Compile all examples for Arduino Nano
         run: |
           find examples -name "*.ino" | while read sketch; do
             echo "Compiling $sketch for arduino:avr:nano"
-            arduino-cli compile --fqbn arduino:avr:nano "$sketch"
+            arduino-cli compile --library . --fqbn arduino:avr:nano "$sketch"
           done
