@@ -23,6 +23,23 @@ jobs:
       - name: Install AVR core
         run: arduino-cli core install arduino:avr
 
+      - name: Install SAMD core
+        run: arduino-cli core install arduino:samd
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config set board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Install ESP8266 core
+        run: |
+          arduino-cli config set board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json,https://arduino.esp8266.com/stable/package_esp8266com_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp8266:esp8266
+
       - name: Compile all examples for Arduino Uno
         run: |
           find examples -name "*.ino" | while read sketch; do
@@ -35,4 +52,25 @@ jobs:
           find examples -name "*.ino" | while read sketch; do
             echo "Compiling $sketch for arduino:avr:nano"
             arduino-cli compile --library . --fqbn arduino:avr:nano "$sketch"
+          done
+
+      - name: Compile all examples for Arduino Zero
+        run: |
+          find examples -name "*.ino" | while read sketch; do
+            echo "Compiling $sketch for arduino:samd:arduino_zero_native"
+            arduino-cli compile --library . --fqbn arduino:samd:arduino_zero_native "$sketch"
+          done
+
+      - name: Compile all examples for ESP32 Dev Module
+        run: |
+          find examples -name "*.ino" | while read sketch; do
+            echo "Compiling $sketch for esp32:esp32:esp32"
+            arduino-cli compile --library . --fqbn esp32:esp32:esp32 "$sketch"
+          done
+
+      - name: Compile all examples for NodeMCU 1.0 (ESP8266)
+        run: |
+          find examples -name "*.ino" | while read sketch; do
+            echo "Compiling $sketch for esp8266:esp8266:nodemcuv2"
+            arduino-cli compile --library . --fqbn esp8266:esp8266:nodemcuv2 "$sketch"
           done
