@@ -44,6 +44,15 @@ where understanding the underlying protocol and timing behavior is important.
 
 ---
 
+## Learn More
+
+For a deeper understanding of timing constraints, protocol behavior, and common pitfalls:
+
+- Article: [Understanding the DHT Protocol — Timing, Pitfalls, and Reliable Implementation](https://forum.arduino.cc/t/why-dht11-and-dht22-lie-to-users-and-it-s-usually-not-the-sensor-s-fault/1431362)
+- Video: [Common DHT Mistakes and How to Fix Them (with myDHT)](https://youtu.be/tDPxM93k9E8)
+
+---
+
 ## Why myDHT?
 
 Most existing DHT libraries fall into one of two categories:
