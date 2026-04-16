@@ -6,6 +6,19 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 ---
+
+## [2.0.4] – 16.04.2026.
+
+### Fixed
+- Fixed compilation error on ESP32 and stricter toolchains
+- Resolved "jump to case label" issue in `processAsync()`
+- Added proper variable scoping inside `switch-case` blocks
+
+### Notes
+- This issue was identified through real user feedback
+
+---
+
 ## [2.0.3] – 16.02.2026.
 
 ### Fixed
@@ -17,7 +30,9 @@ and this project adheres to Semantic Versioning.
 
 ### Verified
 - Tested with real DHT11 and DHT22 hardware (forced and auto modes)
+
 ---
+
 ## [2.0.2] – 07.01.2026.
 
 ### Added
@@ -43,6 +58,7 @@ and this project adheres to Semantic Versioning.
 - Minor documentation inconsistencies and outdated references (examples, file names, folder structure)
 
 ---
+
 ## [2.0.0] – 15.12.2025.
 
 ### Added
